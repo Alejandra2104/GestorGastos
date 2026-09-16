@@ -1681,6 +1681,26 @@ async function restablecerDatosSimulados() {
 }
 
 // ==========================================================================
+// Restablecer todos los datos a 0 (estado vacío)
+// ==========================================================================
+
+async function restablecerDatosA0() {
+    if (confirm('¿Estás seguro que quieres restablecer todos los datos a 0?\n\nEsto borrará las transacciones, recurrentes, metas y usuarios, dejando la aplicación en su estado inicial vacío. Esta acción no se puede deshacer.')) {
+        estado.transacciones = [];
+        estado.recurrentes = [];
+        estado.metasPorMes = {};
+        estado.usuarios = {};
+        guardarLocalmente();
+        try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
+        api('/api/simular', 'POST').catch(() => {});
+        mostrarToast('Todos los datos restablecidos a 0', 'info');
+        inicializarSelectorMeses();
+        actualizarSelectUsuarios();
+        actualizarVistas();
+    }
+}
+
+// ==========================================================================
 // Notificaciones Toast Flotantes
 // ==========================================================================
 
