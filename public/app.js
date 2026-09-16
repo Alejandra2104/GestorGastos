@@ -87,8 +87,8 @@ const estado = {
     metasPorMes: {},
     usuarios: {},
     _borrados: {},
-    mesSeleccionado: "2026-08",
-    mesCalendario: { anio: 2026, mes: 7 },
+    mesSeleccionado: claveMesActual(),
+    mesCalendario: calendarioMesActual(),
     tabActiva: "resumen",
     filtros: {
         busqueda: "",
@@ -357,14 +357,28 @@ function cambiarTab(tabId) {
 // Gestión de Meses
 // ==========================================================================
 
+function claveMesActual() {
+    const h = new Date();
+    return h.getFullYear() + '-' + String(h.getMonth() + 1).padStart(2, '0');
+}
+function calendarioMesActual() {
+    const h = new Date();
+    return { anio: h.getFullYear(), mes: h.getMonth() };
+}
+function fechaHoyISO() {
+    const h = new Date();
+    return h.getFullYear() + '-' + String(h.getMonth() + 1).padStart(2, '0') + '-' + String(h.getDate()).padStart(2, '0');
+}
 function inicializarSelectorMeses() {
     const select = document.getElementById('globalMonthSelect');
     if (!select) return;
 
-    const mesesSet = new Set([
-        "2026-09", "2026-08", "2026-07", "2026-06",
-        "2026-05", "2026-04", "2026-03", "2026-02", "2026-01"
-    ]);
+    const mesesSet = new Set();
+    const h = new Date();
+    for (let i = 0; i < 12; i++) {
+        const d = new Date(h.getFullYear(), h.getMonth() - i, 1);
+        mesesSet.add(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+    }
 
     estado.transacciones.forEach(t => {
         if (t.fecha) {
@@ -1376,7 +1390,7 @@ function abrirModalOperacion(prefill = {}) {
     document.getElementById('opTelefono').value = prefill.telefono || Object.keys(estado.usuarios)[0] || '600111222';
     document.getElementById('opEsCompartido').checked = prefill.esCompartido !== undefined ? prefill.esCompartido : true;
 
-    const fechaDefecto = prefill.fecha || (estado.mesSeleccionado + '-10');
+    const fechaDefecto = prefill.fecha || fechaHoyISO();
     document.getElementById('opFecha').value = fechaDefecto.substring(0, 10);
 
     document.getElementById('groupEsFijoCheckbox').style.display = prefill.id ? 'none' : 'block';
