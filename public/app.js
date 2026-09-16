@@ -8,16 +8,16 @@
 // ==========================================================================
 
 const CATEGORIAS_CONFIG = {
-    "Alimentación": { icon: "🛒", color: "#9333ea", desc: "Supermercados, frutería, carnicería" },
-    "Vivienda": { icon: "🏠", color: "#7c3aed", desc: "Alquiler, hipoteca, comunidad" },
-    "Transporte": { icon: "🚗", color: "#6d28d9", desc: "Gasolina, coche, transporte público" },
-    "Suministros": { icon: "💡", color: "#c026d3", desc: "Luz, agua, gas, internet, móvil" },
+    "Alimentación": { icon: "🛒", color: "#10b981", desc: "Supermercados, frutería, carnicería" },
+    "Vivienda": { icon: "🏠", color: "#6366f1", desc: "Alquiler, hipoteca, comunidad" },
+    "Transporte": { icon: "🚗", color: "#0284c7", desc: "Gasolina, coche, transporte público" },
+    "Suministros": { icon: "💡", color: "#f59e0b", desc: "Luz, agua, gas, internet, móvil" },
     "Moda y Estética": { icon: "👗", color: "#ec4899", desc: "Ropa, calzado, peluquería" },
     "Ocio y Actividades": { icon: "🍿", color: "#8b5cf6", desc: "Restaurantes, viajes, cine, suscripciones" },
-    "Salud y Cuidado": { icon: "💊", color: "#a855f7", desc: "Farmacia, médico, dentista, gimnasio" },
-    "Banco y Seguros": { icon: "🏦", color: "#5b21b6", desc: "Nóminas, comisiones, pólizas" },
-    "Otros": { icon: "📦", color: "#d946ef", desc: "Compras varias, regalos, imprevistos" },
-    "General": { icon: "📁", color: "#a89ccf", desc: "Categoría general" }
+    "Salud y Cuidado": { icon: "💊", color: "#14b8a6", desc: "Farmacia, médico, dentista, gimnasio" },
+    "Banco y Seguros": { icon: "🏦", color: "#64748b", desc: "Nóminas, comisiones, pólizas" },
+    "Otros": { icon: "📦", color: "#a855f7", desc: "Compras varias, regalos, imprevistos" },
+    "General": { icon: "📁", color: "#94a3b8", desc: "Categoría general" }
 };
 
 const DATOS_INICIALES = { usuarios: {}, metasPorMes: {}, recurrentes: [], transacciones: [] };
@@ -765,7 +765,7 @@ function renderCharts() {
             const strokeOffset = -accumulatedDash;
             accumulatedDash += strokeDash;
 
-            const config = CATEGORIAS_CONFIG[cat] || { icon: "📁", color: "#a89ccf" };
+            const config = CATEGORIAS_CONFIG[cat] || { icon: "📁", color: "#94a3b8" };
             svgPaths += `
                 <circle cx="80" cy="80" r="${radius}" fill="transparent" 
                     stroke="${config.color}" stroke-width="24"
@@ -911,7 +911,7 @@ function renderTransacciones() {
     }
 
     filtradas.forEach(t => {
-        const catConfig = CATEGORIAS_CONFIG[t.categoria] || { icon: "📁", color: "#a89ccf" };
+        const catConfig = CATEGORIAS_CONFIG[t.categoria] || { icon: "📁", color: "#94a3b8" };
         const nombreUsuario = estado.usuarios[t.telefono] || t.telefono;
         const fechaFormat = new Date(t.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
         const esIngreso = t.tipo === 'ingreso';
@@ -1066,7 +1066,7 @@ function abrirModalDia(dia, mes, anio, transacciones) {
             if (t.tipo === 'ingreso') totalDiaIng += t.cantidad;
             else totalDiaGas += t.cantidad;
 
-            const config = CATEGORIAS_CONFIG[t.categoria] || { icon: "📁", color: "#a89ccf" };
+            const config = CATEGORIAS_CONFIG[t.categoria] || { icon: "📁", color: "#94a3b8" };
             container.innerHTML += `
                 <div class="transaction-item" style="padding: 8px 10px;">
                     <div class="tx-left">
@@ -1119,7 +1119,7 @@ function renderRecurrentes() {
             else totalGastosFijos += r.cantidad;
         }
 
-        const catConfig = CATEGORIAS_CONFIG[r.categoria] || { icon: "📁", color: "#a89ccf" };
+        const catConfig = CATEGORIAS_CONFIG[r.categoria] || { icon: "📁", color: "#94a3b8" };
         const card = document.createElement('div');
         card.className = 'recurring-card';
 
