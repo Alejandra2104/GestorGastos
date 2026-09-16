@@ -8,13 +8,13 @@
 // ==========================================================================
 
 const CATEGORIAS_CONFIG = {
-    "Alimentación": { icon: "🛒", color: "#10b981", desc: "Supermercados, frutería, carnicería" },
+    "Alimentación": { icon: "🛒", color: "#f97316", desc: "Supermercados, frutería, carnicería" },
     "Vivienda": { icon: "🏠", color: "#6366f1", desc: "Alquiler, hipoteca, comunidad" },
     "Transporte": { icon: "🚗", color: "#0284c7", desc: "Gasolina, coche, transporte público" },
-    "Suministros": { icon: "💡", color: "#f59e0b", desc: "Luz, agua, gas, internet, móvil" },
+    "Suministros": { icon: "💡", color: "#eab308", desc: "Luz, agua, gas, internet, móvil" },
     "Moda y Estética": { icon: "👗", color: "#ec4899", desc: "Ropa, calzado, peluquería" },
     "Ocio y Actividades": { icon: "🍿", color: "#8b5cf6", desc: "Restaurantes, viajes, cine, suscripciones" },
-    "Salud y Cuidado": { icon: "💊", color: "#14b8a6", desc: "Farmacia, médico, dentista, gimnasio" },
+    "Salud y Cuidado": { icon: "💊", color: "#06b6d4", desc: "Farmacia, médico, dentista, gimnasio" },
     "Banco y Seguros": { icon: "🏦", color: "#64748b", desc: "Nóminas, comisiones, pólizas" },
     "Otros": { icon: "📦", color: "#a855f7", desc: "Compras varias, regalos, imprevistos" },
     "General": { icon: "📁", color: "#94a3b8", desc: "Categoría general" }
