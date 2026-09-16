@@ -1,0 +1,19 @@
+{
+  "name": "gestor-gastos-app",
+  "version": "1.0.0",
+  "description": "Gestor de Gastos Familiar — app de escritorio (Windows, macOS, Linux) con Electron",
+  "main": "main.js",
+  "author": "Familia",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis portable",
+    "dist:linux": "electron-builder --linux AppImage deb",
+    "dist:mac": "electron-builder --mac dmg zip",
+    "dist:all": "electron-builder -mwl"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  }
+}

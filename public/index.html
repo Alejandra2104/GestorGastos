@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Gestor de Gastos Familiar Avanzado 💶</title>
+    <meta name="description" content="Gestión integral de economía familiar, balance anual, reparto de gastos compartidos y previsiones financieras. Funciona offline como app instalable.">
+    <link rel="canonical" href="./index.html">
+
+    <!-- ===== PWA / Instalable multi-plataforma ===== -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#090d16" media="(prefers-color-scheme: dark)">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="GestorGastos">
+
+    <!-- iOS / iPadOS / macOS Safari -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GestorGastos">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
+    <link rel="mask-icon" href="icons/icon-192.png" color="#4f46e5">
+
+    <!-- Windows / Edge -->
+    <meta name="msapplication-TileColor" content="#4f46e5">
+    <meta name="msapplication-TileImage" content="icons/icon-144.png">
+    <meta name="msapplication-config" content="browserconfig.xml">
+
+    <!-- Iconos estándar Android / Desktop -->
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="72x72" href="icons/icon-72.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="icons/icon-96.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="shortcut icon" href="favicon.ico.png" type="image/png">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Gestor de Gastos Familiar">
+    <meta property="og:description" content="App instalable: controla gastos, metas de ahorro y reparto familiar. Windows, macOS, Linux, Android e iOS.">
+    <meta property="og:image" content="icon-512.png">
+
+    <!-- Tipografía Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css">
+    <style>
+      /* Banner de instalación PWA + estado offline (ligero, no depende de style.css) */
+      #pwaInstallBar{display:none;position:sticky;top:0;z-index:900;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:10px 14px;font-size:.88rem;box-shadow:0 4px 14px rgba(79,70,229,.35)}
+      #pwaInstallBar .row{max-width:1100px;margin:0 auto;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+      #pwaInstallBar button{border:none;border-radius:999px;padding:8px 16px;font-weight:800;cursor:pointer}
+      #pwaInstallBtn{background:#fff;color:#4f46e5}
+      #pwaDismissBtn{background:rgba(255,255,255,.2);color:#fff}
+      #pwaUpdateBar{display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:1200;background:#0f172a;color:#fff;padding:10px 14px;border-radius:12px;font-size:.85rem;box-shadow:0 10px 25px rgba(0,0,0,.3);gap:10px;align-items:center}
+      #pwaUpdateBar button{background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer}
+      #offlineBadge{display:none;position:fixed;bottom:16px;right:16px;z-index:1200;background:#92400e;color:#fef3c7;padding:8px 12px;border-radius:999px;font-size:.78rem;font-weight:700}
+      #iosHelp{display:none;position:fixed;inset:auto 12px 12px 12px;z-index:1200;background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-radius:14px;padding:14px;font-size:.85rem;box-shadow:0 20px 40px rgba(0,0,0,.2)}
+      body.dark-mode #iosHelp{background:#131b2e;color:#f8fafc;border-color:#24304f}
+      #modoBadge{display:inline-block;margin-top:4px;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:999px;background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+      #modoBadge[data-modo="server"]{background:#dcfce7;color:#166534;border-color:#bbf7d0}
+      #modoBadge[data-modo="local"]{background:#fef9c3;color:#854d0e;border-color:#fde68a}
+      body.dark-mode #modoBadge{background:#1a233a;color:#a5b4fc;border-color:#24304f}
+      body.dark-mode #modoBadge[data-modo="local"]{background:#3b2f0b;color:#fde68a;border-color:#854d0e}
+    </style>
+</head>
+<body>
+    <!-- Barra de instalación PWA (Windows/Linux/Mac/Android) -->
+    <div id="pwaInstallBar" role="banner">
+      <div class="row">
+        <span>📲 <strong>Instala Gestor de Gastos como app</strong> — funciona offline en Windows, Mac, Linux y Android.</span>
+        <span style="display:flex;gap:8px">
+          <button id="pwaInstallBtn">Instalar app</button>
+          <button id="pwaDismissBtn" aria-label="Cerrar">✕</button>
+        </span>
+      </div>
+    </div>
+
+    <div class="app-wrapper">
+        <!-- Barra Superior / Header -->
+        <header class="app-header">
+            <div class="brand-section">
+                <div class="brand-icon">💶</div>
+                <div class="brand-info">
+                    <h1>Gestor de Gastos</h1>
+                    <p>Economía familiar y balance avanzado</p>
+                    <span id="modoBadge" data-modo="local" title="La app funciona 100% en local. El servidor es opcional.">● Modo local</span>
+                </div>
+            </div>
+
+            <!-- Selector Central de Mes -->
+            <div class="month-selector-bar">
+                <button class="month-nav-btn" id="btnPrevMonth" title="Mes anterior" onclick="navegarMes(-1)">◀</button>
+                <select class="month-select-dropdown" id="globalMonthSelect" onchange="seleccionarMes(this.value)">
+                    <!-- Opciones generadas dinámicamente -->
+                </select>
+                <button class="month-nav-btn" id="btnNextMonth" title="Mes siguiente" onclick="navegarMes(1)">▶</button>
+            </div>
+
+            <!-- Acciones de Cabecera -->
+            <div class="header-actions">
+                <button class="btn-icon" id="btnThemeToggle" title="Cambiar tema claro/oscuro" onclick="toggleDarkMode()">
+                    <span id="themeIcon">🌙</span>
+                </button>
+                <button class="btn btn-primary" onclick="abrirModalOperacion()">
+                    <span>➕</span> Nueva Operación
+                </button>
+            </div>
+        </header>
+
+        <!-- Navegación por Pestañas -->
+        <nav class="tabs-nav" aria-label="Secciones de la aplicación">
+            <button class="tab-btn active" onclick="cambiarTab('resumen')">
+                <span>📊</span> Resumen
+            </button>
+            <button class="tab-btn" onclick="cambiarTab('calendario')">
+                <span>📅</span> Calendario
+            </button>
+            <button class="tab-btn" onclick="cambiarTab('recurrentes')">
+                <span>📌</span> Gastos Fijos
+                <span class="tab-badge" id="badgeRecurrentesCount">0</span>
+            </button>
+            <button class="tab-btn" onclick="cambiarTab('split')">
+                <span>👥</span> Reparto Familiar
+            </button>
+            <button class="tab-btn" onclick="cambiarTab('ajustes')">
+                <span>⚙️</span> Ajustes & Datos
+            </button>
+        </nav>
+
+        <!-- =================================================================
+             PESTAÑA 1: RESUMEN / DASHBOARD
+             ================================================================= -->
+        <main id="tab-resumen" class="tab-content active">
+            <!-- Tarjeta Hero de Balance Mensual -->
+            <section class="hero-balance-card">
+                <div class="balance-header">
+                    <span class="balance-label">Balance Neto Mensual</span>
+                    <span class="balance-month-pill" id="lblHeroMonth">Agosto 2026</span>
+                </div>
+                <div class="balance-amount">
+                    <span id="valHeroBalance">0.00</span> <small>€</small>
+                </div>
+                <div class="balance-stats-row">
+                    <div class="balance-stat-item">
+                        <div class="balance-stat-icon icon-ingresos">📈</div>
+                        <div class="balance-stat-info">
+                            <span>Ingresos Totales</span>
+                            <strong id="valHeroIngresos">+0.00 €</strong>
+                        </div>
+                    </div>
+                    <div class="balance-stat-item">
+                        <div class="balance-stat-icon icon-gastos">📉</div>
+                        <div class="balance-stat-info">
+                            <span>Gastos Totales</span>
+                            <strong id="valHeroGastos">-0.00 €</strong>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Cuadrícula de KPIs Anuales y Medias -->
+            <section class="kpi-grid-4">
+                <div class="kpi-box">
+                    <div class="kpi-box-top">
+                        <span class="title">Ahorro Anual (<span id="lblKpiAnio">2026</span>)</span>
+                        <span class="kpi-badge" id="badgeKpiAhorro">Acumulado</span>
+                    </div>
+                    <h3 id="valKpiAhorroAnual">0.00 €</h3>
+                    <small>Suma de ingresos - gastos del año</small>
+                </div>
+
+                <div class="kpi-box">
+                    <div class="kpi-box-top">
+                        <span class="title">Media Ingresos (12m)</span>
+                        <span class="kpi-badge" style="background: var(--success-light); color: var(--success-text);">Promedio</span>
+                    </div>
+                    <h3 id="valKpiMediaIngresos" style="color: var(--success);">0.00 €</h3>
+                    <small>Ingresos medios mensuales</small>
+                </div>
+
+                <div class="kpi-box">
+                    <div class="kpi-box-top">
+                        <span class="title">Media Gastos (12m)</span>
+                        <span class="kpi-badge" style="background: var(--danger-light); color: var(--danger-text);">Promedio</span>
+                    </div>
+                    <h3 id="valKpiMediaGastos" style="color: var(--danger);">0.00 €</h3>
+                    <small>Gastos medios mensuales</small>
+                </div>
+
+                <div class="kpi-box">
+                    <div class="kpi-box-top">
+                        <span class="title">Gastos Fijos Programados</span>
+                        <span class="kpi-badge" style="background: var(--info-light); color: #0369a1;">Fijo</span>
+                    </div>
+                    <h3 id="valKpiFijosTotal">0.00 €</h3>
+                    <small id="lblKpiFijosCount">0 conceptos al mes</small>
+                </div>
+            </section>
+
+            <!-- Tarjeta de Meta de Ahorro y Asistente de Recuperación -->
+            <section class="card savings-goal-card">
+                <div class="goal-top-row">
+                    <div>
+                        <h2 class="card-title">🎯 Meta de Ahorro del Mes</h2>
+                        <p class="card-subtitle">Fija un objetivo y analiza el rendimiento financiero mensual</p>
+                    </div>
+                    <div class="goal-inputs-inline">
+                        <input type="number" step="10" min="0" id="inputMetaAhorro" class="goal-input-field" placeholder="250">
+                        <button class="btn btn-outline" style="padding: 8px 14px;" onclick="guardarMetaAhorro()">Guardar Meta</button>
+                    </div>
+                </div>
+
+                <div class="progress-container">
+                    <div class="progress-fill" id="progressMetaFill" style="width: 0%;"></div>
+                </div>
+
+                <div class="goal-status-labels">
+                    <span id="lblMetaAhorrado">Ahorro conseguido: 0.00 €</span>
+                    <span id="lblMetaPorcentaje">0% de la meta</span>
+                </div>
+
+                <!-- Banners Inteligentes -->
+                <div id="bannerCelebracion" class="banner banner-celebration">
+                    🎉 <strong>¡Objetivo Cumplido!</strong> Habéis superado con éxito la meta de ahorro establecida para este mes. 🥳
+                </div>
+
+                <div id="bannerDeficit" class="banner banner-deficit">
+                    <div>
+                        ⚠️ <strong>Déficit de Ahorro:</strong> Faltan <strong id="lblDeficitImporte">0.00 €</strong> para cumplir el objetivo del mes.
+                        <div class="prorate-controls">
+                            <span>¿Deseáis amortizar este desfase en:</span>
+                            <select id="selectMesesProrrateo" class="filter-select" style="min-width: 100px; padding: 4px 8px;" onchange="actualizarCalculoProrrateo()">
+                                <option value="2">2 meses</option>
+                                <option value="4">4 meses</option>
+                                <option value="6" selected>6 meses</option>
+                                <option value="8">8 meses</option>
+                                <option value="12">12 meses</option>
+                            </select>
+                            <button class="btn btn-outline" style="padding: 5px 12px; font-size: 0.8rem;" onclick="aplicarPlanProrrateo()">Aplicar Plan de Recuperación</button>
+                        </div>
+                        <div id="lblProrrateoDetalle" style="font-size: 0.82rem; margin-top: 6px; font-weight: 500;"></div>
+                    </div>
+                </div>
+
+                <div id="bannerSpike" class="banner banner-advice">
+                    💡 <span id="lblSpikeTexto"></span>
+                </div>
+            </section>
+
+            <!-- Gráficos Interactivos: Categorías & Evolución Mensual -->
+            <section class="charts-grid">
+                <!-- Gráfico de Donut de Gastos por Categoría -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📂 Gastos por Categoría</h2>
+                        <span class="card-subtitle" id="lblTotalGastosCat">Total: 0 €</span>
+                    </div>
+                    <div class="chart-wrapper" id="containerChartCategorias">
+                        <!-- SVG interactivo generado por JS -->
+                    </div>
+                    <div class="categories-legend-list" id="legendCategoriasList">
+                        <!-- Leyenda interactiva -->
+                    </div>
+                </div>
+
+                <!-- Gráfico de Barras de Evolución Temporal -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📈 Evolución Últimos Meses</h2>
+                        <span class="card-subtitle">Ingresos vs Gastos</span>
+                    </div>
+                    <div class="chart-wrapper" id="containerChartEvolucion">
+                        <!-- SVG interactivo generado por JS -->
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 16px; margin-top: 14px; font-size: 0.82rem; font-weight: 600;">
+                        <span style="color: var(--success);">■ Ingresos</span>
+                        <span style="color: var(--danger);">■ Gastos</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Listado y Filtros de Transacciones -->
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">📝 Movimientos del Mes</h2>
+                        <span class="card-subtitle" id="lblTxCounter">Mostrando 0 movimientos</span>
+                    </div>
+                    <button class="btn btn-outline" style="padding: 7px 12px; font-size: 0.82rem;" onclick="abrirModalOperacion()">+ Añadir Movimiento</button>
+                </div>
+
+                <!-- Barra de Filtros y Búsqueda -->
+                <div class="filters-bar">
+                    <div class="search-input-box">
+                        <span class="search-icon-fixed">🔍</span>
+                        <input type="text" id="inputSearchTx" placeholder="Buscar por concepto o notas..." oninput="filtrarTransacciones()">
+                    </div>
+
+                    <select id="filterTipo" class="filter-select" onchange="filtrarTransacciones()">
+                        <option value="todos">Todos los Tipos</option>
+                        <option value="gasto">Solo Gastos</option>
+                        <option value="ingreso">Solo Ingresos</option>
+                        <option value="compartido">Solo Compartidos</option>
+                    </select>
+
+                    <select id="filterCategoria" class="filter-select" onchange="filtrarTransacciones()">
+                        <option value="todas">Todas las Categorías</option>
+                        <!-- Rellenado dinámicamente -->
+                    </select>
+
+                    <select id="filterUsuario" class="filter-select" onchange="filtrarTransacciones()">
+                        <option value="todos">Todos los Miembros</option>
+                        <!-- Rellenado dinámicamente -->
+                    </select>
+                </div>
+
+                <!-- Contenedor del Listado -->
+                <div class="transactions-list" id="txListContainer">
+                    <!-- Filas renderizadas por JS -->
+                </div>
+            </section>
+        </main>
+
+        <!-- =================================================================
+             PESTAÑA 2: CALENDARIO INTERACTIVO
+             ================================================================= -->
+        <main id="tab-calendario" class="tab-content">
+            <div class="card">
+                <div class="calendar-header-toolbar">
+                    <button class="btn btn-outline" onclick="navegarMesCalendario(-1)">◀ Anterior</button>
+                    <h2 class="calendar-month-title" id="lblCalendarioTitle">Agosto 2026</h2>
+                    <button class="btn btn-outline" onclick="navegarMesCalendario(1)">Siguiente ▶</button>
+                </div>
+
+                <div class="calendar-grid-container" id="calendarGridContainer">
+                    <!-- Cuadrícula generada por JS -->
+                </div>
+            </div>
+        </main>
+
+        <!-- =================================================================
+             PESTAÑA 3: GASTOS E INGRESOS FIJOS (RECURRENTES)
+             ================================================================= -->
+        <main id="tab-recurrentes" class="tab-content">
+            <div class="card" style="background: linear-gradient(135deg, var(--bg-card) 0%, var(--primary-surface) 100%);">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">📌 Conceptos Fijos Periódicos</h2>
+                        <p class="card-subtitle">Hipoteca, suministros, nóminas, suscripciones mensuales fijas</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="abrirModalRecurrente()">➕ Nuevo Gasto/Ingreso Fijo</button>
+                </div>
+                <div style="display: flex; gap: 20px; margin-top: 10px; flex-wrap: wrap;">
+                    <div style="font-size: 0.9rem;">
+                        <span style="color: var(--text-muted);">Total Gastos Fijos: </span>
+                        <strong id="lblTotalFijosGastos" style="color: var(--danger); font-size: 1.1rem;">0.00 €/mes</strong>
+                    </div>
+                    <div style="font-size: 0.9rem;">
+                        <span style="color: var(--text-muted);">Total Ingresos Fijos: </span>
+                        <strong id="lblTotalFijosIngresos" style="color: var(--success); font-size: 1.1rem;">0.00 €/mes</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="recurring-grid" id="recurringGridContainer">
+                <!-- Tarjetas de recurrentes generadas por JS -->
+            </div>
+        </main>
+
+        <!-- =================================================================
+             PESTAÑA 4: REPARTO FAMILIAR (SPLIT & DEUDAS)
+             ================================================================= -->
+        <main id="tab-split" class="tab-content">
+            <div class="split-summary-box">
+                <h2 style="font-size: 1.3rem; margin-bottom: 6px;">👥 Gastos Compartidos Familiares</h2>
+                <p style="opacity: 0.85; font-size: 0.88rem;">Cálculo automático de aportaciones y equilibrio de gastos marcados como "compartidos".</p>
+
+                <div class="split-members-row" id="splitMembersContainer">
+                    <!-- Columnas de cada miembro generadas por JS -->
+                </div>
+
+                <div class="settlement-recommendation" id="settlementBox">
+                    <span id="lblSettlementMessage">Cargando cálculo de saldos...</span>
+                    <button class="btn btn-outline" style="background: white; color: #065f46; border: none; font-size: 0.82rem;" onclick="registrarLiquidacion()">
+                        🤝 Saldar y Registrar Ajuste
+                    </button>
+                </div>
+            </div>
+
+            <!-- Directorio y Añadir Miembros Familiares -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">👤 Miembros Familiares y Teléfonos</h2>
+                        <span class="card-subtitle">Añade o edita los miembros que participan en el reparto de gastos</span>
+                    </div>
+                </div>
+
+                <!-- Formulario para añadir nuevo teléfono -->
+                <form id="formAddUsuario" onsubmit="agregarNuevoUsuario(event)" style="display: flex; gap: 12px; align-items: flex-end; margin-bottom: 24px; padding: 16px; background: var(--primary-surface); border: 1px dashed var(--primary-light); border-radius: var(--radius-md); flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 140px;">
+                        <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;">Número de Teléfono</label>
+                        <input type="tel" id="newTelInput" class="form-control" placeholder="Ej: 600999888" required style="padding: 9px 12px; font-size: 0.88rem;">
+                    </div>
+                    <div style="flex: 1.5; min-width: 160px;">
+                        <label class="form-label" style="font-size: 0.72rem; margin-bottom: 4px;">Nombre o Alias</label>
+                        <input type="text" id="newNameInput" class="form-control" placeholder="Ej: Carlos, Hermano/a, Compañero..." required style="padding: 9px 12px; font-size: 0.88rem;">
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-primary" style="padding: 10px 18px; font-size: 0.88rem;">
+                            ➕ Añadir Teléfono
+                        </button>
+                    </div>
+                </form>
+
+                <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em;">
+                    Miembros Registrados Actualmente
+                </h4>
+                <div id="usersDirectoryContainer" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Lista de usuarios editable -->
+                </div>
+            </div>
+        </main>
+
+        <!-- =================================================================
+             PESTAÑA 5: AJUSTES, BACKUPS & RESTABLECER
+             ================================================================= -->
+        <main id="tab-ajustes" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">💾 Copias de Seguridad & Exportación</h2>
+                    <span class="card-subtitle">Descarga o importa tus datos para total privacidad y control</span>
+                </div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;">
+                    <button class="btn btn-outline" onclick="exportarCSV()">
+                        📊 Exportar a Excel / CSV
+                    </button>
+                    <button class="btn btn-outline" onclick="exportarJSON()">
+                        📁 Descargar Copia de Seguridad (JSON)
+                    </button>
+                    <label class="btn btn-outline" style="cursor: pointer;">
+                        📥 Importar Copia de Seguridad
+                        <input type="file" id="inputImportFile" accept=".json" style="display: none;" onchange="importarJSON(event)">
+                    </label>
+                </div>
+
+                <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
+
+                <div class="card-header">
+                    <h2 class="card-title" style="color: var(--warning-text);">🧪 Datos de Prueba / Demostración</h2>
+                    <span class="card-subtitle">Restablece un conjunto de datos realistas para probar todas las funcionalidades</span>
+                </div>
+                <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 14px;">
+                    Esta acción cargará meses variados con transacciones completas (Alimentación, Ocio, Moda, Viajes, Suministros, Nóminas, Fijos) para evaluar gráficos y KPIs al instante.
+                </p>
+                <button class="btn btn-outline" style="border-color: var(--warning); color: var(--warning-text);" onclick="restablecerDatosSimulados()">
+                    ⚡ Cargar Datos de Demostración
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- =====================================================================
+         MODAL 1: NUEVA / EDITAR OPERACIÓN
+         ===================================================================== -->
+    <div id="modalOperacion" class="modal-backdrop" onclick="cerrarModalFuera(event, 'modalOperacion')">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalOperacionTitle">Nueva Operación</h3>
+                <button class="modal-close-btn" onclick="cerrarModal('modalOperacion')">✕</button>
+            </div>
+            <form id="formOperacion" onsubmit="guardarOperacion(event)">
+                <input type="hidden" id="opId">
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label class="form-label" for="opTipo">Tipo de Operación</label>
+                        <select id="opTipo" class="form-control" onchange="actualizarCategoriasSegunTipo()">
+                            <option value="gasto">Gasto (-)</option>
+                            <option value="ingreso">Ingreso (+)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="opCantidad">Cantidad (€)</label>
+                        <input type="number" step="0.01" min="0.01" id="opCantidad" class="form-control" placeholder="0.00" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="opConcepto">Concepto / Descripción</label>
+                    <input type="text" id="opConcepto" class="form-control" placeholder="Ej: Compra Mercadona, Nómina..." required>
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label class="form-label" for="opCategoria">Categoría</label>
+                        <select id="opCategoria" class="form-control" required>
+                            <!-- Rellenado dinámicamente con iconos -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="opFecha">Fecha</label>
+                        <input type="date" id="opFecha" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="opTelefono">Miembro que paga / cobra</label>
+                    <select id="opTelefono" class="form-control">
+                        <!-- Opciones de teléfonos/usuarios -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="checkbox-card">
+                        <input type="checkbox" id="opEsCompartido" checked>
+                        <span>Gasto compartido (se incluye en el reparto familiar 50/50)</span>
+                    </label>
+                </div>
+
+                <!-- Opción de marcar como fijo periódico -->
+                <div class="form-group" id="groupEsFijoCheckbox">
+                    <label class="checkbox-card">
+                        <input type="checkbox" id="opEsFijo" onchange="toggleOpcionesFijo()">
+                        <span>Convertir también en gasto/ingreso fijo periódico mensual</span>
+                    </label>
+                </div>
+
+                <div id="opcionesFijoContainer" style="display: none; padding: 12px; background: var(--bg-card-hover); border-radius: var(--radius-md); margin-bottom: 16px;">
+                    <label class="form-label" for="opDiaFijo">Día del mes en que se repite (1 al 31)</label>
+                    <input type="number" id="opDiaFijo" min="1" max="31" class="form-control" placeholder="Ej: 5">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" onclick="cerrarModal('modalOperacion')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Operación</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         MODAL 2: DETALLE DEL DÍA EN CALENDARIO
+         ===================================================================== -->
+    <div id="modalDiaDetalle" class="modal-backdrop" onclick="cerrarModalFuera(event, 'modalDiaDetalle')">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 class="modal-title" id="lblModalDiaFecha">Movimientos del Día</h3>
+                <button class="modal-close-btn" onclick="cerrarModal('modalDiaDetalle')">✕</button>
+            </div>
+            <div id="modalDiaListContainer" style="max-height: 360px; overflow-y: auto; margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px;">
+                <!-- Lista de movimientos de ese día -->
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <button type="button" class="btn btn-outline" onclick="cerrarModal('modalDiaDetalle')">Cerrar</button>
+                <button type="button" class="btn btn-primary" id="btnModalDiaAddOp">➕ Añadir a esta fecha</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- =====================================================================
+         MODAL 3: NUEVO / EDITAR GASTO FIJO RECURRENTE
+         ===================================================================== -->
+    <div id="modalRecurrente" class="modal-backdrop" onclick="cerrarModalFuera(event, 'modalRecurrente')">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalRecurrenteTitle">Nuevo Concepto Fijo</h3>
+                <button class="modal-close-btn" onclick="cerrarModal('modalRecurrente')">✕</button>
+            </div>
+            <form id="formRecurrente" onsubmit="guardarRecurrente(event)">
+                <input type="hidden" id="recId">
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label class="form-label" for="recTipo">Tipo</label>
+                        <select id="recTipo" class="form-control">
+                            <option value="gasto">Gasto Fijo (-)</option>
+                            <option value="ingreso">Ingreso Fijo (+)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="recCantidad">Cantidad Mensual (€)</label>
+                        <input type="number" step="0.01" min="0.01" id="recCantidad" class="form-control" placeholder="0.00" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="recConcepto">Concepto</label>
+                    <input type="text" id="recConcepto" class="form-control" placeholder="Ej: Alquiler, Gimnasio, Fibra..." required>
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label class="form-label" for="recDia">Día del Mes (1 - 31)</label>
+                        <input type="number" id="recDia" min="1" max="31" class="form-control" placeholder="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="recCategoria">Categoría</label>
+                        <select id="recCategoria" class="form-control">
+                            <!-- Rellenado por JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline" onclick="cerrarModal('modalRecurrente')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Concepto Fijo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Contenedor de Alertas Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div id="pwaUpdateBar"><span>✨ Hay una nueva versión disponible.</span><button id="pwaUpdateBtn">Actualizar</button></div>
+    <div id="offlineBadge">📶 Sin conexión — modo offline</div>
+    <div id="iosHelp">📱 En <strong>iPhone / iPad / Mac (Safari)</strong>: pulsa <strong>Compartir ⬆️ → Añadir a pantalla de inicio</strong> para instalar la app. <button id="iosHelpClose" style="margin-left:8px;border:1px solid #cbd5e1;border-radius:8px;padding:4px 10px;cursor:pointer">Entendido</button></div>
+
+    <!-- Script Principal de la Aplicación -->
+    <script src="app.js"></script>
+    <script>
+    // Lógica de instalación PWA separada del negocio (funciona en todos los navegadores)
+    (function(){
+      let deferredPrompt = null;
+      const bar = document.getElementById('pwaInstallBar');
+      const btn = document.getElementById('pwaInstallBtn');
+      const dismiss = document.getElementById('pwaDismissBtn');
+      const iosHelp = document.getElementById('iosHelp');
+      const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      const dismissed = localStorage.getItem('pwa_install_dismissed') === '1';
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault(); deferredPrompt = e;
+        if (!isStandalone && !dismissed) bar.style.display = 'block';
+      });
+      // Si no hay evento pero es instalable (Android/desktop), mostrar tras 2s salvo iOS/dismiss
+      setTimeout(() => {
+        if (!deferredPrompt && !isStandalone && !dismissed && !isIOS) {
+          // Solo mostrar si el navegador soporta instalación (Chrome/Edge)
+          if ('getInstalledRelatedApps' in navigator || 'BeforeInstallPromptEvent' in window || /Chrome|Edg|Brave|Opera|SamsungBrowser/i.test(navigator.userAgent)) bar.style.display = 'block';
+        }
+        if (isIOS && !isStandalone && !dismissed && isSafari) iosHelp.style.display = 'block';
+      }, 2500);
+      // Deep-links ?tab= / ?action=
+      try {
+        const q = new URLSearchParams(location.search);
+        const tab = q.get('tab');
+        if (tab && typeof cambiarTab === 'function') setTimeout(() => cambiarTab(tab), 600);
+        if (q.get('action') === 'nuevo') setTimeout(() => { if (typeof abrirModalOperacion === 'function') abrirModalOperacion(); }, 800);
+      } catch(e){}
+      if (btn) btn.addEventListener('click', async () => {
+        if (deferredPrompt) { deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; bar.style.display = 'none'; }
+        else if (isIOS) { iosHelp.style.display = 'block'; }
+        else { alert('En tu navegador: Menú ⋮ → "Instalar app" o "Añadir a pantalla de inicio".'); }
+      });
+      if (dismiss) dismiss.addEventListener('click', () => { bar.style.display = 'none'; localStorage.setItem('pwa_install_dismissed','1'); });
+      const iosClose = document.getElementById('iosHelpClose');
+      if (iosClose) iosClose.addEventListener('click', () => { iosHelp.style.display='none'; localStorage.setItem('pwa_install_dismissed','1'); });
+      window.addEventListener('appinstalled', () => { bar.style.display='none'; iosHelp.style.display='none'; });
+      // Badge offline/online
+      const badge = document.getElementById('offlineBadge');
+      function syncOnline(){ badge.style.display = navigator.onLine ? 'none' : 'block'; }
+      window.addEventListener('online', syncOnline); window.addEventListener('offline', syncOnline); syncOnline();
+      // Aviso de actualización del Service Worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
+        navigator.serviceWorker.ready.then((reg) => {
+          if (reg.waiting) document.getElementById('pwaUpdateBar').style.display = 'flex';
+          reg.addEventListener('updatefound', () => {
+            const nw = reg.installing;
+            if (nw) nw.addEventListener('statechange', () => {
+              if (nw.state === 'installed' && navigator.serviceWorker.controller) document.getElementById('pwaUpdateBar').style.display = 'flex';
+            });
+          });
+        });
+        document.getElementById('pwaUpdateBtn').addEventListener('click', () => {
+          navigator.serviceWorker.ready.then((reg) => { if (reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'}); else window.location.reload(); });
+        });
+      }
+    })();
+    </script>
+</body>
+</html>

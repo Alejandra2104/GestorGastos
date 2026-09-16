@@ -1,0 +1,21 @@
+{
+  "name": "gestor-gastos",
+  "version": "1.0.0",
+  "description": "Gestor de Gastos Familiar — PWA instalable (Windows, macOS, Linux, Android, iOS) + HTML portable + Electron/Capacitor",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "https": "node tools/https.js",
+    "pwa": "node server.js",
+    "pwa:single": "node tools/build-single-html.js && python3 tools/zip-pwa.py",
+    "pwa:zip": "python3 tools/zip-pwa.py",
+    "pwa:check": "node -e \"JSON.parse(require('fs').readFileSync('public/manifest.json','utf8'));console.log('manifest OK')\" && node tools/build-single-html.js",
+    "electron:start": "npm --prefix electron-app start",
+    "electron:win": "npm --prefix electron-app run dist:win",
+    "electron:linux": "npm --prefix electron-app run dist:linux",
+    "electron:mac": "npm --prefix electron-app run dist:mac"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

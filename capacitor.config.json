@@ -1,0 +1,15 @@
+{
+  "appId": "com.familia.gestorgastos",
+  "appName": "Gestor de Gastos",
+  "webDir": "public",
+  "backgroundColor": "#f8fafc",
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

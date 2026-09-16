@@ -1,0 +1,34 @@
+appId: com.familia.gestorgastos
+productName: Gestor de Gastos
+copyright: Copyright © 2026 Familia
+directories:
+  output: dist-electron
+  app: ..
+files:
+  - electron-app/main.js
+  - electron-app/package.json
+  - public/**/*
+  - package.json
+win:
+  target:
+    - nsis
+    - portable
+  icon: ../public/icons/icon-512.png
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: Gestor de Gastos
+linux:
+  target:
+    - AppImage
+    - deb
+  icon: ../public/icons/icon-512.png
+  category: Finance
+mac:
+  target:
+    - dmg
+    - zip
+  icon: ../public/icons/icon-512.png
+  category: public.app-category.finance
+portable:
+  artifactName: GestorGastos-Portable-${version}.${ext}

@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.familia.gestorgastos",
+    "sha256_cert_fingerprints": ["SUSTITUYE_POR_TU_SHA256_DE_PLAY_CONSOLE"]
+  }
+}]

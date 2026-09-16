@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Gastos Familiar Avanzado</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <style>
+        :root { --primary: #4f46e5; --success: #10b981; --danger: #ef4444; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text); }
+        .app-container { max-width: 520px; margin: 0 auto; padding-bottom: 40px; }
+        
+        header { text-align: center; margin-bottom: 20px; }
+        header h1 { font-size: 1.6rem; color: var(--primary); margin: 0; }
+        header p { font-size: 0.85rem; color: #64748b; margin: 5px 0 0; }
+
+        .card { background: var(--card); padding: 18px; border-radius: 16px; margin-bottom: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .balance-card { text-align: center; padding: 24px; border-radius: 20px; color: white; background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); }
+        .balance-card span { font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; }
+        .balance-card h2 { margin: 8px 0 0; font-size: 2.2rem; font-weight: 700; }
+        
+        .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        .kpi-card { background: var(--card); padding: 14px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; text-align: center; }
+        .kpi-card span { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #64748b; display: block; margin-bottom: 6px; }
+        .kpi-card h3 { font-size: 1.2rem; margin: 0; color: var(--text); }
+        
+        .media-categorias-lista { margin-top: 8px; font-size: 0.85rem; text-align: left; }
+        .media-cat-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f1f5f9; }
+
+        .banner { padding: 14px; border-radius: 10px; font-size: 0.9rem; margin-bottom: 16px; display: none; text-align: left; font-weight: 500; line-height: 1.4; }
+        .success-banner { background: #d1fae5; border-left: 4px solid var(--success); color: #065f46; font-weight: bold; text-align: center; }
+        .advice-banner { background: #e0e7ff; border-left: 4px solid var(--primary); color: #3730a3; }
+
+        label { display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; color: #475569; text-transform: uppercase; }
+        input, select { width: 100%; padding: 12px; margin-bottom: 14px; border: 1px solid #cbd5e1; border-radius: 10px; box-sizing: border-box; font-size: 0.95rem; background: #f8fafc; }
+        
+        button { width: 100%; background: var(--primary); color: white; border: none; padding: 14px; border-radius: 10px; font-weight: 600; font-size: 1rem; cursor: pointer; }
+        button:hover { background: #4338ca; }
+        .btn-test { background: #0ea5e9; margin-bottom: 16px; font-size: 0.9rem; padding: 10px; }
+
+        .checkbox-group { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; background: #f1f5f9; padding: 10px; border-radius: 8px; }
+        .checkbox-group input { width: auto; margin: 0; }
+        .checkbox-group label { margin: 0; text-transform: none; color: var(--text); }
+
+        h3 { font-size: 1.05rem; margin-top: 0; margin-bottom: 14px; color: #334155; }
+        .movimiento-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
+        
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-weight: bold; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+        .calendar-day-name { font-size: 0.75rem; color: #64748b; font-weight: bold; padding-bottom: 4px; }
+        .calendar-day { min-height: 75px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px; font-size: 0.7rem; display: flex; flex-direction: column; justify-content: flex-start; overflow: hidden; cursor: pointer; transition: background 0.15s; }
+        .calendar-day:hover { background: #e2e8f0; }
+        .calendar-day.has-events { border-color: #cbd5e1; }
+        .calendar-day span.num { font-weight: bold; font-size: 0.7rem; text-align: left; margin-bottom: 2px; display: block; color: #334155; }
+        
+        .calendar-event { font-size: 0.6rem; background: rgba(255, 255, 255, 0.9); padding: 1px 2px; border-radius: 3px; margin-bottom: 2px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+        .event-gasto { color: #b91c1c; }
+        .event-ingreso { color: #047857; }
+        .event-fijo { color: #1d4ed8; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); justify-content: center; align-items: center; z-index: 1000; padding: 15px; box-sizing: border-box; }
+        .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: scaleIn 0.2s ease-out; }
+        @keyframes scaleIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 12px; }
+        .modal-header h3 { margin: 0; color: var(--primary); font-size: 1.1rem; }
+        .modal-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b; width: auto; padding: 0; }
+        .modal-close:hover { color: var(--text); background: none; }
+
+        .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .tab { flex: 1; padding: 10px; text-align: center; background: #e2e8f0; border-radius: 8px; font-weight: 600; font-size: 0.85rem; cursor: pointer; color: #64748b; }
+        .tab.active { background: var(--primary); color: white; }
+        .section-view { display: none; }
+        .section-view.active { display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <h1>Gestor de Gastos 💶</h1>
+            <p>Economía familiar con balance anual y desglose detallado</p>
+        </header>
+
+        <button class="btn-test" onclick="simularDatos()">🧪 Restablecer Datos de Prueba</button>
+
+        <div class="tabs">
+            <div class="tab active" onclick="cambiarTab('principal')">Panel Principal</div>
+            <div class="tab" onclick="cambiarTab('calendario')">📅 Calendario</div>
+            <div class="tab" onclick="cambiarTab('recurrentes')">Gastos Fijos</div>
+        </div>
+
+        <div id="view-principal" class="section-view active">
+            
+            <!-- KPIs y Acumulado Anual -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <span>Ahorro Acumulado Año (<span id="lblAnioActual">2026</span>)</span>
+                    <h3 id="kpiAhorroAnual" style="font-size: 1.2rem; margin-top: 4px; color: var(--success);">0.00 €</h3>
+                </div>
+                <div class="kpi-card">
+                    <span>Media Ingresos (12m)</span>
+                    <h3 id="kpiMediaIngresos" style="font-size: 1.1rem; margin-top: 4px; color: var(--success);">0.00 €</h3>
+                </div>
+                <div class="kpi-card">
+                    <span>Media Gastos (12m)</span>
+                    <h3 id="kpiMediaGastos" style="font-size: 1.1rem; margin-top: 4px; color: var(--danger);">0.00 €</h3>
+                </div>
+                <div class="kpi-card" style="grid-column: span 2; text-align: left;">
+                    <span>Media Gasto Mensual por Categoría (12m)</span>
+                    <div id="kpiMediaGastoCategorias" class="media-categorias-lista">
+                        <span style="color: #94a3b8; font-weight: normal;">Calculando...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="background: #eef2ff; border: 1px solid #c7d2fe;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <label style="color: #3730a3; margin: 0;">Mes a visualizar</label>
+                    <select id="filtroMes" style="width: 150px; margin: 0; padding: 6px;" onchange="cambiarMesSeleccionado()">
+                        <option value="2026-08">Agosto 2026</option>
+                        <option value="2026-07">Julio 2026</option>
+                        <option value="2026-06">Junio 2026</option>
+                        <option value="2026-05">Mayo 2026</option>
+                        <option value="2026-04">Abril 2026</option>
+                        <option value="2026-03">Marzo 2026</option>
+                    </select>
+                </div>
+                <label style="color: #3730a3;">🎯 Meta de ahorro para este mes (€)</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="number" id="metaAhorroMes" placeholder="Ej: 200" style="margin-bottom: 0; background: white;">
+                    <button onclick="guardarMeta()" style="width: auto; padding: 0 20px;">Actualizar</button>
+                </div>
+            </div>
+
+            <div id="bannerCelebracion" class="banner success-banner">
+                🎉 ¡Objetivo conseguido! Habéis cumplido la meta de ahorro de este mes. 🥳
+            </div>
+            <div id="bannerConsejoCategoria" class="banner advice-banner">
+                💡 <span id="textoConsejoCategoria"></span>
+            </div>
+
+            <div id="tarjetaBalance" class="balance-card card">
+                <span>Balance del Mes Seleccionado</span>
+                <h2 id="balanceTotal">0.00 €</h2>
+                <div style="font-size: 0.8rem; margin-top: 8px; opacity: 0.9;" id="detalleIngresosGastos">Ingresos: 0€ | Gastos: 0€</div>
+            </div>
+
+            <div class="card">
+                <h3>Nueva Operación</h3>
+                <form id="transaccionForm">
+                    <label>Teléfono (Sincronización)</label>
+                    <input type="tel" id="telefono" placeholder="Ej: 600123456" required>
+                    <label>Tipo</label>
+                    <select id="tipo">
+                        <option value="gasto">Gasto</option>
+                        <option value="ingreso">Ingreso</option>
+                    </select>
+                    <label>Concepto</label>
+                    <input type="text" id="concepto" placeholder="Ej: Vestido Zara / Vinted" required>
+                    <label>Categoría</label>
+                    <select id="categoria">
+                        <option value="Vivienda">Vivienda (Alquiler / Hipoteca / Comunidad)</option>
+                        <option value="Alimentación">Alimentación (Supermercados)</option>
+                        <option value="Transporte">Transporte (Combustible / Coche / Parking)</option>
+                        <option value="Suministros">Suministros (Luz / Agua / Internet)</option>
+                        <option value="Moda y Estética">Moda y Estética (Ropa / Zapatos / Thrifting / Peluquería)</option>
+                        <option value="Ocio y Actividades">Ocio y Actividades (Restaurantes / Viajes)</option>
+                        <option value="Salud y Cuidado">Salud y Cuidado (Farmacia / Médico / Gimnasio)</option>
+                        <option value="Banco y Seguros">Banco y Seguros (Comisiones / Pólizas)</option>
+                        <option value="Otros">Otros / Varios</option>
+                    </select>
+                    <label>Cantidad (€)</label>
+                    <input type="number" step="0.01" id="cantidad" placeholder="0.00" required>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="esCompartido">
+                        <label for="esCompartido">Gasto compartido (sincronizado)</label>
+                    </div>
+                    <button type="submit">Guardar Operación</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>Movimientos del Mes</h3>
+                <div id="listaMovimientos">
+                    <p style="text-align: center; color: #94a3b8; font-size: 0.9rem;">No hay movimientos en este mes.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-calendario" class="section-view">
+            <div class="card">
+                <div class="calendar-header">
+                    <button onclick="cambiarMesCalendario(-1)" style="width: auto; padding: 6px 12px; font-size: 0.8rem;">◀</button>
+                    <span id="tituloMesCalendario">Agosto 2026</span>
+                    <button onclick="cambiarMesCalendario(1)" style="width: auto; padding: 6px 12px; font-size: 0.8rem;">▶</button>
+                </div>
+                <div class="calendar-grid" id="calendarioGrid"></div>
+            </div>
+        </div>
+
+        <div id="view-recurrentes" class="section-view">
+            <div class="card">
+                <h3>Gastos Fijos Programados</h3>
+                <div id="listaRecurrentes">
+                    <p style="text-align: center; color: #94a3b8; font-size: 0.9rem;">No hay gastos fijos programados.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ventana Modal de Desglose del Día -->
+    <div id="modalDia" class="modal-overlay" onclick="cerrarModalDiaFuera(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTituloFecha">Desglose del día</h3>
+                <button class="modal-close" onclick="cerrarModalDia()">✕</button>
+            </div>
+            <div id="modalListaMovimientos" style="max-height: 300px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <script>
+        let datosGlobales = {
+            metasPorMes: {
+                "2025-09": 200, "2025-10": 200, "2025-11": 200, "2025-12": 250,
+                "2026-01": 200, "2026-02": 200, "2026-03": 150, "2026-04": 200,
+                "2026-05": 200, "2026-06": 250, "2026-07": 300, "2026-08": 200
+            },
+            recurrentes: [
+                { concepto: "Hipoteca Piso", dia: 1, cantidad: 750, categoria: "Vivienda" },
+                { concepto: "Seguro de Coche", dia: 5, cantidad: 47.77, categoria: "Transporte" }
+            ],
+            transacciones: [
+                { telefono: "600111222", tipo: "ingreso", concepto: "Nómina J", categoria: "Banco y Seguros", cantidad: 1800, fecha: "2026-03-01T08:00:00.000Z" },
+                { telefono: "600111222", tipo: "gasto", concepto: "Compra semanal", categoria: "Alimentación", cantidad: 300, fecha: "2026-03-10T10:00:00.000Z" },
+                { telefono: "600111222", tipo: "ingreso", concepto: "Nómina J", categoria: "Banco y Seguros", cantidad: 1800, fecha: "2026-04-01T08:00:00.000Z" },
+                { telefono: "600111222", tipo: "gasto", concepto: "Supermercado grande", categoria: "Alimentación", cantidad: 900, fecha: "2026-04-12T12:00:00.000Z" },
+                { telefono: "600111222", tipo: "ingreso", concepto: "Nómina J", categoria: "Banco y Seguros", cantidad: 1800, fecha: "2026-05-01T08:00:00.000Z" },
+                { telefono: "600111222", tipo: "gasto", concepto: "Supermercado", categoria: "Alimentación", cantidad: 320, fecha: "2026-05-10T10:00:00.000Z" },
+                { telefono: "600111222", tipo: "ingreso", concepto: "Nómina J", categoria: "Banco y Seguros", cantidad: 1800, fecha: "2026-06-01T08:00:00.000Z" },
+                { telefono: "600111222", tipo: "gasto", concepto: "Gasolina", categoria: "Transporte", cantidad: 700, fecha: "2026-06-14T11:00:00.000Z" },
+                { telefono: "600111222", tipo: "ingreso", concepto: "Nómina y Extra", categoria: "Banco y Seguros", cantidad: 2800, fecha: "2026-07-01T08:00:00.000Z" },
+                { telefono: "600111222", tipo: "gasto", concepto: "Supermercado", categoria: "Alimentación", cantidad: 400, fecha: "2026-07-10T10:00:00.000Z" },
+                { telefono: "600111222", tipo: "ingreso", concepto: "Nómina J", categoria: "Banco y Seguros", cantidad: 1800, fecha: "2026-08-01T08:00:00.000Z" },
+                { telefono: "600111222", tipo: "gasto", concepto: "Vestido Vintage Thrifting", categoria: "Moda y Estética", cantidad: 65, fecha: "2026-08-04T12:00:00.000Z" },
+                { telefono: "600111222", tipo: "gasto", concepto: "Cena y Cine", categoria: "Ocio y Actividades", cantidad: 885, fecha: "2026-08-05T10:00:00.000Z" },
+                { telefono: "600333444", tipo: "gasto", concepto: "Gasolina viaje", categoria: "Transporte", cantidad: 420, fecha: "2026-08-20T10:00:00.000Z" }
+            ]
+        };
+
+        let mesCalendarioActual = { anio: 2026, mes: 7 };
+
+        function cambiarTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.section-view').forEach(v => v.classList.remove('active'));
+            if(tab === 'principal') {
+                document.querySelectorAll('.tab')[0].classList.add('active');
+                document.getElementById('view-principal').classList.add('active');
+            } else if(tab === 'calendario') {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('view-calendario').classList.add('active');
+                renderizarCalendario();
+            } else {
+                document.querySelectorAll('.tab')[2].classList.add('active');
+                document.getElementById('view-recurrentes').classList.add('active');
+            }
+        }
+
+        function simularDatos() {
+            alert("¡Datos de prueba actualizados con éxito!");
+            cargarDatos();
+        }
+
+        function cargarDatos() {
+            const mesSelStr = document.getElementById('filtroMes').value;
+            const metaActual = datosGlobales.metasPorMes[mesSelStr] || 200;
+            document.getElementById('metaAhorroMes').value = metaActual;
+            
+            calcularKPIsAnualesMedias();
+            procesarVistaPrincipal();
+            renderizarGastosRecurrentes();
+            renderizarCalendario();
+        }
+
+        function cambiarMesSeleccionado() {
+            const mesSelStr = document.getElementById('filtroMes').value;
+            document.getElementById('metaAhorroMes').value = datosGlobales.metasPorMes[mesSelStr] || 200;
+            procesarVistaPrincipal();
+        }
+
+        function obtenerOperacionesDelMes(anio, mesSel) {
+            let ops = [];
+            datosGlobales.transacciones.forEach(t => {
+                const f = new Date(t.fecha);
+                if (f.getFullYear() === anio && (f.getMonth() + 1) === mesSel) {
+                    ops.push(t);
+                }
+            });
+
+            datosGlobales.recurrentes.forEach(r => {
+                const fechaFijo = new Date(anio, mesSel - 1, r.dia, 12, 0, 0);
+                ops.push({
+                    telefono: "Fijo",
+                    tipo: "gasto",
+                    concepto: r.concepto,
+                    categoria: r.categoria || "Vivienda",
+                    cantidad: r.cantidad,
+                    esFijo: true,
+                    fecha: fechaFijo.toISOString()
+                });
+            });
+
+            return ops;
+        }
+
+        function calcularKPIsAnualesMedias() {
+            const mesSelStr = document.getElementById('filtroMes').value;
+            const [anioSel] = mesSelStr.split('-').map(Number);
+            document.getElementById('lblAnioActual').innerText = anioSel;
+
+            let totalIngresosAnio = 0;
+            let totalGastosAnio = 0;
+            for (let m = 1; m <= 12; m++) {
+                let opsM = obtenerOperacionesDelMes(anioSel, m);
+                opsM.forEach(t => {
+                    if (t.tipo === 'ingreso') totalIngresosAnio += t.cantidad;
+                    if (t.tipo === 'gasto') totalGastosAnio += t.cantidad;
+                });
+            }
+            let ahorroAnualTotal = totalIngresosAnio - totalGastosAnio;
+            const elAhorroAnual = document.getElementById('kpiAhorroAnual');
+            elAhorroAnual.innerText = `${ahorroAnualTotal.toFixed(2)} €`;
+            elAhorroAnual.style.color = ahorroAnualTotal >= 0 ? 'var(--success)' : 'var(--danger)';
+
+            let totalIngresos12m = 0;
+            let totalGastos12m = 0;
+            let acumuladoPorCategoria = {};
+            let mesesContados = 0;
+
+            let fechaCursor = new Date(anioSel, parseInt(mesSelStr.split('-')[1]) - 1, 1);
+            for (let i = 0; i < 12; i++) {
+                let anio = fechaCursor.getFullYear();
+                let mes = fechaCursor.getMonth() + 1;
+                
+                let ops = obtenerOperacionesDelMes(anio, mes);
+                if (ops.length > 0) {
+                    mesesContados++;
+                    ops.forEach(t => {
+                        if (t.tipo === 'ingreso') {
+                            totalIngresos12m += t.cantidad;
+                        } else if (t.tipo === 'gasto') {
+                            totalGastos12m += t.cantidad;
+                            acumuladoPorCategoria[t.categoria] = (acumuladoPorCategoria[t.categoria] || 0) + t.cantidad;
+                        }
+                    });
+                }
+                fechaCursor.setMonth(fechaCursor.getMonth() - 1);
+            }
+
+            let divisor = mesesContados > 0 ? mesesContados : 1;
+            document.getElementById('kpiMediaIngresos').innerText = `${(totalIngresos12m / divisor).toFixed(2)} €`;
+            document.getElementById('kpiMediaGastos').innerText = `${(totalGastos12m / divisor).toFixed(2)} €`;
+
+            const contenedorMedias = document.getElementById('kpiMediaGastoCategorias');
+            contenedorMedias.innerHTML = '';
+            
+            if (Object.keys(acumuladoPorCategoria).length > 0) {
+                for (let cat in acumuladoPorCategoria) {
+                    let mediaCat = acumuladoPorCategoria[cat] / divisor;
+                    contenedorMedias.innerHTML += `
+                        <div class="media-cat-item">
+                            <span>📂 ${cat}</span>
+                            <strong>${mediaCat.toFixed(2)} €/mes</strong>
+                        </div>
+                    `;
+                }
+            } else {
+                contenedorMedias.innerHTML = '<span style="color: #94a3b8; font-weight: normal;">Sin datos registrados.</span>';
+            }
+        }
+
+        function actualizarProrrateoDinamico(deficit) {
+            const selectMeses = document.getElementById('selectMesesRecuperacion');
+            if(!selectMeses) return;
+            const mesesElegidos = parseInt(selectMeses.value) || 6;
+            const metaBaseActual = parseFloat(document.getElementById('metaAhorroMes').value) || 200;
+            const cuotaExtraPorMes = deficit / mesesElegidos;
+            const cuotaTotalSugerida = metaBaseActual + cuotaExtraPorMes;
+
+            document.getElementById('textoCuotaCalculada').innerHTML = 
+                `Para compensar el desfase en <strong>${mesesElegidos} meses</strong>, añadiríais <strong>${cuotaExtraPorMes.toFixed(2)} €/mes</strong> extra (total objetivo de <strong>${cuotaTotalSugerida.toFixed(2)} €</strong> por mes).`;
+        }
+
+        function aplicarProrrateoAutomatico(deficit) {
+            const selectMeses = document.getElementById('selectMesesRecuperacion');
+            const mesesElegidos = parseInt(selectMeses.value) || 6;
+            const metaBaseActual = parseFloat(document.getElementById('metaAhorroMes').value) || 200;
+            const cuotaExtraPorMes = deficit / mesesElegidos;
+            const nuevaBaseSugerida = Math.round(metaBaseActual + cuotaExtraPorMes);
+
+            const mesSelStr = document.getElementById('filtroMes').value;
+            let [anio, mes] = mesSelStr.split('-').map(Number);
+
+            for(let i = 1; i <= mesesElegidos; i++) {
+                mes++;
+                if(mes > 12) { mes = 1; anio++; }
+                let claveMes = `${anio}-${String(mes).padStart(2, '0')}`;
+                datosGlobales.metasPorMes[claveMes] = nuevaBaseSugerida;
+            }
+
+            alert(`¡Configurado con éxito! Se ha fijado una base de ahorro de ${nuevaBaseSugerida} € durante los próximos ${mesesElegidos} meses.`);
+            procesarVistaPrincipal();
+        }
+
+        function procesarVistaPrincipal() {
+            const mesSeleccionado = document.getElementById('filtroMes').value;
+            const [anioSel, mesSel] = mesSeleccionado.split('-').map(Number);
+
+            let totalIngresos = 0;
+            let totalGastos = 0;
+            let gastosPorCategoriaActual = {};
+            
+            const lista = document.getElementById('listaMovimientos');
+            lista.innerHTML = '';
+
+            const operacionesMes = obtenerOperacionesDelMes(anioSel, mesSel);
+
+            if(operacionesMes.length > 0) {
+                operacionesMes.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+
+                operacionesMes.forEach(t => {
+                    if (t.tipo === 'ingreso') {
+                        totalIngresos += t.cantidad;
+                    } else {
+                        totalGastos += t.cantidad;
+                        gastosPorCategoriaActual[t.categoria] = (gastosPorCategoriaActual[t.categoria] || 0) + t.cantidad;
+                    }
+
+                    const div = document.createElement('div');
+                    div.className = 'movimiento-item';
+                    const etiquetaFijo = t.esFijo ? ' 📌 [Gasto Fijo]' : '';
+                    div.innerHTML = `
+                        <div>
+                            <strong>${t.concepto}</strong>${etiquetaFijo}<br>
+                            <small style="color:#64748b;">📂 ${t.categoria} · 📅 ${new Date(t.fecha).toLocaleDateString()} · 📱 ${t.telefono}</small>
+                        </div>
+                        <div style="color: ${t.tipo === 'ingreso' ? 'var(--success)' : 'var(--danger)'}; font-weight: bold;">
+                            ${t.tipo === 'ingreso' ? '+' : '-'}${t.cantidad.toFixed(2)} €
+                        </div>
+                    `;
+                    lista.appendChild(div);
+                });
+            } else {
+                lista.innerHTML = '<p style="text-align: center; color: #94a3b8; font-size: 0.9rem;">No hay movimientos en este mes.</p>';
+            }
+
+            const balance = totalIngresos - totalGastos;
+            document.getElementById('balanceTotal').innerText = `${balance.toFixed(2)} €`;
+            document.getElementById('detalleIngresosGastos').innerText = `Ingresos: ${totalIngresos.toFixed(2)}€ | Gastos: ${totalGastos.toFixed(2)}€`;
+
+            const metaInput = document.getElementById('metaAhorroMes').value;
+            const meta = metaInput ? parseFloat(metaInput) : 200;
+            datosGlobales.metasPorMes[mesSeleccionado] = meta;
+            
+            let mesAnt = mesSel - 1;
+            let anioAnt = anioSel;
+            if (mesAnt === 0) { mesAnt = 12; anioAnt--; }
+
+            let gastosPorCategoriaAnterior = {};
+            let operacionesMesAnt = obtenerOperacionesDelMes(anioAnt, mesAnt);
+            operacionesMesAnt.forEach(t => {
+                if (t.tipo === 'gasto') {
+                    gastosPorCategoriaAnterior[t.categoria] = (gastosPorCategoriaAnterior[t.categoria] || 0) + t.cantidad;
+                }
+            });
+
+            let catIncrementoMax = null;
+            let mayorDiferencia = 0;
+
+            for (let cat in gastosPorCategoriaActual) {
+                let actual = gastosPorCategoriaActual[cat];
+                let anterior = gastosPorCategoriaAnterior[cat] || 0;
+                let diff = actual - anterior;
+                
+                if (diff > mayorDiferencia) {
+                    mayorDiferencia = diff;
+                    catIncrementoMax = cat;
+                }
+            }
+
+            const bannerCelebracion = document.getElementById('bannerCelebracion');
+            const bannerConsejo = document.getElementById('bannerConsejoCategoria');
+
+            let mensajeHTML = "";
+            let mostrarBannerConsejo = false;
+
+            if (catIncrementoMax && mayorDiferencia > 0) {
+                mostrarBannerConsejo = true;
+                let gastoActualCat = gastosPorCategoriaActual[catIncrementoMax];
+                mensajeHTML = `📊 Este mes habéis gastado <strong>${gastoActualCat.toFixed(2)} €</strong> en la categoría <strong>"${catIncrementoMax}"</strong> (<strong>${mayorDiferencia.toFixed(2)} € más</strong> que el mes anterior).`;
+            }
+
+            if (balance >= meta) {
+                bannerCelebracion.style.display = 'block';
+            } else {
+                bannerCelebracion.style.display = 'none';
+                let deficitPendiente = meta - balance;
+                
+                let avisoDeficit = `⚠️ <strong>Desfase en la meta:</strong> Faltan ${deficitPendiente.toFixed(2)} € para el objetivo.<br><br>
+                ¿En cuántos meses queréis resarcir este importe?<br>
+                <div style="margin-top: 6px; display: flex; gap: 8px; align-items: center;">
+                    <select id="selectMesesRecuperacion" onchange="actualizarProrrateoDinamico(${deficitPendiente})" style="width: 100px; margin:0; padding:4px; background:white;">
+                        <option value="2">2 meses</option>
+                        <option value="4">4 meses</option>
+                        <option value="6" selected>6 meses</option>
+                        <option value="8">8 meses</option>
+                        <option value="12">12 meses</option>
+                    </select>
+                    <button onclick="aplicarProrrateoAutomatico(${deficitPendiente})" style="width:auto; padding:6px 12px; font-size:0.8rem;">Aplicar Plan</button>
+                </div>
+                <div id="textoCuotaCalculada" style="margin-top: 6px; font-size: 0.82rem; font-weight: normal;">
+                    Para compensar el desfase en <strong>6 meses</strong>, añadiríais <strong>${(deficitPendiente / 6).toFixed(2)} €/mes</strong> extra a la base actual.
+                </div>`;
+                
+                if (mostrarBannerConsejo) {
+                    mensajeHTML += `<br><br>` + avisoDeficit;
+                } else {
+                    mostrarBannerConsejo = true;
+                    mensajeHTML = avisoDeficit;
+                }
+            }
+
+            if (mostrarBannerConsejo) {
+                bannerConsejo.style.display = 'block';
+                document.getElementById('textoConsejoCategoria').innerHTML = mensajeHTML;
+            } else {
+                bannerConsejo.style.display = 'none';
+            }
+            
+            calcularKPIsAnualesMedias();
+        }
+
+        function renderizarGastosRecurrentes() {
+            const listaRec = document.getElementById('listaRecurrentes');
+            listaRec.innerHTML = '';
+            if(datosGlobales.recurrentes && datosGlobales.recurrentes.length > 0) {
+                datosGlobales.recurrentes.forEach(r => {
+                    listaRec.innerHTML += `<div class="movimiento-item"><div><strong>${r.concepto}</strong><br><small>📂 ${r.categoria || 'Vivienda'} · Programado el día ${r.dia} de cada mes</small></div><div style="font-weight:bold; color:var(--danger);">${r.cantidad} €</div></div>`;
+                });
+            } else {
+                listaRec.innerHTML = '<p style="text-align: center; color: #94a3b8; font-size: 0.9rem;">No hay gastos fijos.</p>';
+            }
+        }
+
+        function cambiarMesCalendario(dir) {
+            mesCalendarioActual.mes += dir;
+            if (mesCalendarioActual.mes > 11) { mesCalendarioActual.mes = 0; mesCalendarioActual.anio++; }
+            if (mesCalendarioActual.mes < 0) { mesCalendarioActual.mes = 11; mesCalendarioActual.anio--; }
+            renderizarCalendario();
+        }
+
+        function renderizarCalendario() {
+            const anio = mesCalendarioActual.anio;
+            const mes = mesCalendarioActual.mes;
+            
+            const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            document.getElementById('tituloMesCalendario').innerText = `${nombresMeses[mes]} ${anio}`;
+
+            const grid = document.getElementById('calendarioGrid');
+            grid.innerHTML = '';
+
+            const diasSemana = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
+            diasSemana.forEach(d => {
+                grid.innerHTML += `<div class="calendar-day-name">${d}</div>`;
+            });
+
+            let primerDiaIndex = new Date(anio, mes, 1).getDay();
+            primerDiaIndex = primerDiaIndex === 0 ? 6 : primerDiaIndex - 1;
+            const totalDias = new Date(anio, mes + 1, 0).getDate();
+
+            for (let i = 0; i < primerDiaIndex; i++) {
+                grid.innerHTML += `<div class="calendar-day" style="background: transparent; border: none; cursor: default;"></div>`;
+            }
+
+            const operacionesMes = obtenerOperacionesDelMes(anio, mes + 1);
+            let transaccionesPorDia = {};
+            operacionesMes.forEach(t => {
+                const f = new Date(t.fecha);
+                const diaNum = f.getDate();
+                if (!transaccionesPorDia[diaNum]) transaccionesPorDia[diaNum] = [];
+                transaccionesPorDia[diaNum].push(t);
+            });
+
+            for (let dia = 1; dia <= totalDias; dia++) {
+                const transDia = transaccionesPorDia[dia] || [];
+                let etiquetaHtml = `<span class="num">${dia}</span>`;
+                let claseExtra = transDia.length > 0 ? 'has-events' : '';
+
+                if (transDia.length > 0) {
+                    transDia.forEach(t => {
+                        let signo = t.tipo === 'ingreso' ? '+' : '-';
+                        let claseColor = t.esFijo ? 'event-fijo' : (t.tipo === 'ingreso' ? 'event-ingreso' : 'event-gasto');
+                        let prefijoFijo = t.esFijo ? '📌 ' : '';
+                        etiquetaHtml += `<div class="calendar-event ${claseColor}">${prefijoFijo}${t.categoria}: ${signo}${t.cantidad}€</div>`;
+                    });
+                } else {
+                    etiquetaHtml += `<span style="opacity:0.3; font-size:0.6rem;">-</span>`;
+                }
+
+                const celda = document.createElement('div');
+                celda.className = `calendar-day ${claseExtra}`;
+                celda.innerHTML = etiquetaHtml;
+                celda.onclick = () => abrirModalDia(dia, mes, anio, transDia);
+                grid.appendChild(celda);
+            }
+        }
+
+        function abrirModalDia(dia, mes, anio, transacciones) {
+            const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            document.getElementById('modalTituloFecha').innerText = `Movimientos del ${dia} de ${nombresMeses[mes]} de ${anio}`;
+            
+            const contenedorModal = document.getElementById('modalListaMovimientos');
+            contenedorModal.innerHTML = '';
+
+            if (transacciones && transacciones.length > 0) {
+                transacciones.forEach(t => {
+                    const signo = t.tipo === 'ingreso' ? '+' : '-';
+                    const colorTexto = t.tipo === 'ingreso' ? 'var(--success)' : 'var(--danger)';
+                    const etiquetaFijo = t.esFijo ? ' 📌 [Gasto Fijo]' : '';
+                    
+                    contenedorModal.innerHTML += `
+                        <div class="movimiento-item">
+                            <div>
+                                <strong>${t.concepto}</strong>${etiquetaFijo}<br>
+                                <small style="color:#64748b;">📂 ${t.categoria} · 📱 ${t.telefono}</small>
+                            </div>
+                            <div style="color: ${colorTexto}; font-weight: bold;">
+                                ${signo}${t.cantidad.toFixed(2)} €
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                contenedorModal.innerHTML = `<p style="text-align: center; color: #94a3b8; font-size: 0.9rem; padding: 20px 0;">No hay operaciones registradas en este día.</p>`;
+            }
+
+            document.getElementById('modalDia').style.display = 'flex';
+        }
+
+        function cerrarModalDia() {
+            document.getElementById('modalDia').style.display = 'none';
+        }
+
+        function cerrarModalDiaFuera(event) {
+            if (event.target.id === 'modalDia') {
+                cerrarModalDia();
+            }
+        }
+
+        async function guardarMeta() {
+            const mesSeleccionado = document.getElementById('filtroMes').value;
+            const nuevaMeta = parseFloat(document.getElementById('metaAhorroMes').value) || 200;
+            datosGlobales.metasPorMes[mesSeleccionado] = nuevaMeta;
+            alert("¡Meta de ahorro mensual actualizada con éxito!");
+            procesarVistaPrincipal();
+        }
+
+        document.getElementById('transaccionForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nueva = {
+                telefono: document.getElementById('telefono').value,
+                tipo: document.getElementById('tipo').value,
+                concepto: document.getElementById('concepto').value,
+                categoria: document.getElementById('categoria').value,
+                cantidad: parseFloat(document.getElementById('cantidad').value),
+                esCompartido: document.getElementById('esCompartido').checked,
+                fecha: new Date().toISOString()
+            };
+            datosGlobales.transacciones.push(nueva);
+            document.getElementById('transaccionForm').reset();
+            cargarDatos();
+            alert("¡Operación guardada con éxito!");
+        });
+
+        cargarDatos();
+    </script>
+</body>
+</html>

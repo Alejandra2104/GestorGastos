@@ -1,0 +1,24 @@
+# Dependencias (se reinstalan con npm install)
+node_modules/
+
+# Datos reales: NO subir nunca a un repo (se recrea solo al arrancar server.js)
+data.json
+
+# Túnel temporal y registros locales
+*.log
+tunnel.url
+tunnel.log
+server.log
+https-launcher.log
+URL-HTTPS.txt
+QR-APP.png
+
+# Binario de Cloudflare Tunnel (55 MB, se descarga solo si hace falta)
+tools/cloudflared.exe
+tools/cloudflared
+
+# Generados (se regeneran con npm run pwa:single)
+dist/
+
+.DS_Store
+Thumbs.db
