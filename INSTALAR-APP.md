@@ -3,6 +3,7 @@
 > 🟢 **HTTPS ACTIVO AHORA MISMO** — abre `URL-HTTPS.txt` (o escanea `QR-APP.png`
 > con el iPhone) e instala desde ahí. Se mantiene con `npm run https`.
 > Mientras ese túnel esté abierto, Windows y iPhone comparten los mismos datos.
+> Para no depender del PC, sigue **“HTTPS permanente”** más abajo (5 min, gratis).
 
 Tienes **3 formas** de usar la app. Elige la que prefieras:
 
@@ -20,6 +21,13 @@ Tienes **3 formas** de usar la app. Elige la que prefieras:
 Cualquiera de estas vale:
 - **Local:** `npm start` → abre `http://localhost:3000` (Chrome/Edge permiten instalar desde localhost).
 - **Gratis en internet:** arrastra la carpeta `public/` a **Netlify Drop, Vercel, Cloudflare Pages, GitHub Pages o tu hosting**. Obtendrás `https://tu-app...` instalable desde cualquier dispositivo.
+- **HTTPS permanente recomendado (este repo ya está listo):** GitHub Pages, gratis y para siempre:
+  1. Crea cuenta en github.com y un repositorio **público** llamado `gestor-gastos` (sin README).
+  2. En esta carpeta ejecuta: `git remote add origin https://github.com/TU_USUARIO/gestor-gastos.git` y `git push -u origin main`.
+  3. En GitHub: *Settings → Pages → Source: **GitHub Actions***. Espera 1–2 min.
+  4. Tu URL fija será `https://TU_USUARIO.github.io/gestor-gastos/` — instálala en Windows y iPhone y apaga el PC tranquilo.
+  5. Cada cambio que subas con `git push` se republica solo.
+  Nota: en hosting estático cada dispositivo guarda sus datos por separado (privado por diseño); para pasarlos usa *Ajustes → Descargar/Importar copia JSON* dentro de la app.
 - **Al instante (temporal):** `npm run https` → publica este PC en un HTTPS de Cloudflare
   (sin cuentas). La URL sale en `URL-HTTPS.txt` + `QR-APP.png`. Vale para instalar
   en Windows y iPhone hoy mismo; caduca si apagas el PC o reinicias el comando.
