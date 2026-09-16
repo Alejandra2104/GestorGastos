@@ -473,6 +473,22 @@ function refrescarHogarUI() {
         if (b2) { b2.textContent = '● Modo local'; b2.dataset.modo = 'local'; }
       } catch (e) {}
     }
+    try {
+      var chips = document.getElementById('hogMiembrosChips');
+      if (chips && typeof estado !== 'undefined' && estado.usuarios) {
+        var tels = Object.keys(estado.usuarios);
+        var yo = v ? v.miembroTelefono : null;
+        var h = '<div style="font-size:.8rem;font-weight:700;color:var(--text-secondary);margin-bottom:6px">' +
+          tels.length + (tels.length === 1 ? ' persona en el hogar:' : ' personas en el hogar:') + '</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap">';
+        if (!tels.length) h += '<span style="font-size:.82rem;color:var(--text-secondary)">Aún no hay miembros.</span>';
+        tels.forEach(function (t) {
+          var nm = estado.usuarios[t] || t;
+          h += '<span style="font-size:.8rem;font-weight:700;padding:5px 12px;border-radius:999px;background:var(--primary-surface);border:1px solid var(--primary-light)">👤 ' + nm + (t === yo ? ' (este dispositivo)' : '') + '</span>';
+        });
+        chips.innerHTML = h + '</div>';
+      }
+    } catch (e) {}
   } catch (e) {}
 }
 
@@ -542,6 +558,7 @@ try {
   __g.sincronizarAhora = sincronizarAhora;
   __g.copiarCodigoHogar = copiarCodigoHogar;
   __g.probarConexionNube = probarConexionNube;
+  __g.refrescarHogarUI = refrescarHogarUI;
   __g.__NUBE_TEST__ = {
     mergeEstados: mergeEstados,
     estadoActual: estadoActual,

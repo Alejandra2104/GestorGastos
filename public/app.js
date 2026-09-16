@@ -337,6 +337,12 @@ function cambiarTab(tabId) {
 
     const target = document.getElementById(`tab-${tabId}`);
     if (target) target.classList.add('active');
+    try {
+        if (typeof window !== 'undefined' && window.innerWidth <= 680) {
+            var __nav = document.querySelector('.tabs-nav');
+            if (__nav && __nav.getBoundingClientRect().top < 0) __nav.scrollIntoView();
+        }
+    } catch (e) {}
 
     if (tabId === 'calendario') {
         renderCalendario();
@@ -1339,6 +1345,7 @@ function actualizarSelectUsuarios() {
         selectOpUser.innerHTML += `<option value="${tel}">${nom} (${tel})</option>`;
         selectFilterUser.innerHTML += `<option value="${tel}">${nom}</option>`;
     });
+    try { if (typeof refrescarHogarUI === 'function') refrescarHogarUI(); } catch (e) {}
 }
 
 function abrirModal(modalId) {
