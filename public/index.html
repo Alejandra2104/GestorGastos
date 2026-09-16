@@ -394,6 +394,55 @@
                 </div>
             </div>
 
+            <!-- Hogar compartido en la nube -->
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h2 class="card-title">☁️ Hogar Compartido</h2>
+                        <span class="card-subtitle" id="hogarEstado">Sin vincular: cada dispositivo guarda lo suyo.</span>
+                    </div>
+                </div>
+
+                <div id="hogarSinVinculo">
+                    <p style="font-size:.86rem;color:var(--text-secondary);line-height:1.6;margin-bottom:12px">
+                        Vincula los teléfonos de tu familia con un código: todos veréis y apuntaréis
+                        los mismos gastos en tiempo real. Sin código, cada móvil guarda lo suyo.
+                    </p>
+                    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+                        <div style="flex:1;min-width:140px">
+                            <label class="form-label" style="font-size:.72rem;margin-bottom:4px">Tu nombre</label>
+                            <input type="text" id="hogNombre" class="form-control" placeholder="Ej: Mamá" style="padding:9px 12px;font-size:.88rem">
+                        </div>
+                        <div style="flex:1;min-width:140px">
+                            <label class="form-label" style="font-size:.72rem;margin-bottom:4px">Tu teléfono</label>
+                            <input type="tel" id="hogTelefono" class="form-control" placeholder="Ej: 600123456" style="padding:9px 12px;font-size:.88rem">
+                        </div>
+                        <div style="flex:1;min-width:140px">
+                            <label class="form-label" style="font-size:.72rem;margin-bottom:4px">Código del hogar (para unirse)</label>
+                            <input type="text" id="hogCodigo" class="form-control" placeholder="FAM-XXXXXXXX" style="padding:9px 12px;font-size:.88rem;text-transform:uppercase">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap">
+                        <button class="btn btn-primary" style="padding:10px 18px;font-size:.88rem" onclick="crearHogar()">🏠 Crear hogar nuevo</button>
+                        <button class="btn btn-outline" style="padding:10px 18px;font-size:.88rem" onclick="unirseHogar()">🔗 Unirme con código</button>
+                        <button class="btn btn-outline" style="padding:10px 18px;font-size:.88rem" onclick="probarConexionNube()">📡 Probar conexión</button>
+                    </div>
+                </div>
+
+                <div id="hogarVinculado" style="display:none">
+                    <p style="font-size:.9rem;line-height:1.7">
+                        Hogar <strong id="hogCodigoTxt">—</strong>
+                        <button class="btn btn-outline" style="padding:4px 10px;font-size:.78rem;margin-left:6px" onclick="copiarCodigoHogar()">Copiar código</button><br>
+                        Este dispositivo es <strong id="hogMiembroTxt">—</strong><br>
+                        <span id="hogSyncTxt" style="font-size:.82rem;color:var(--text-secondary)">—</span>
+                    </p>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap">
+                        <button class="btn btn-outline" style="padding:10px 18px;font-size:.88rem" onclick="sincronizarAhora()">↻ Sincronizar ahora</button>
+                        <button class="btn btn-outline" style="padding:10px 18px;font-size:.88rem;color:var(--danger);border-color:var(--danger-light)" onclick="desvincularHogar()">Desvincular este dispositivo</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Directorio y Añadir Miembros Familiares -->
             <div class="card">
                 <div class="card-header">
@@ -626,6 +675,8 @@
 
     <!-- Script Principal de la Aplicación -->
     <script src="app.js"></script>
+    <script src="nube-config.js"></script>
+    <script src="nube.js"></script>
     <script>
     // Lógica de instalación PWA separada del negocio (funciona en todos los navegadores)
     (function(){

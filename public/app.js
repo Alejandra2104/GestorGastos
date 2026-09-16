@@ -86,6 +86,7 @@ const estado = {
     recurrentes: [],
     metasPorMes: {},
     usuarios: {},
+    _borrados: {},
     mesSeleccionado: "2026-08",
     mesCalendario: { anio: 2026, mes: 7 },
     tabActiva: "resumen",
@@ -113,6 +114,7 @@ function guardarLocalmente() {
     } catch (e) {
         console.warn("No se pudo guardar en localStorage:", e);
     }
+    try { if (typeof programarSubidaNube === 'function' && (typeof window === 'undefined' || !window.__NUBE_SUPRIMIR__)) programarSubidaNube(); } catch (e) {}
 }
 
 function cargarLocalmente() {
@@ -124,6 +126,7 @@ function cargarLocalmente() {
             if (Array.isArray(parsed.recurrentes)) estado.recurrentes = parsed.recurrentes;
             if (parsed.metasPorMes && typeof parsed.metasPorMes === 'object') estado.metasPorMes = parsed.metasPorMes;
             if (parsed.usuarios && typeof parsed.usuarios === 'object') estado.usuarios = parsed.usuarios;
+            if (parsed._borrados && typeof parsed._borrados === 'object') estado._borrados = parsed._borrados;
             return true;
         }
     } catch (e) {
@@ -160,6 +163,7 @@ function debeIntentarBackend() {
 }
 
 function actualizarIndicadorModo() {
+    try { if (typeof NUBE_hogarVinculado === 'function' && NUBE_hogarVinculado()) return; } catch (e) {}
     try {
         const el = document.getElementById('modoBadge');
         if (!el) return;
@@ -1272,6 +1276,7 @@ async function eliminarUsuario(telefono) {
     const nombre = estado.usuarios[telefono] || telefono;
     if (confirm(`¿Seguro que deseas eliminar a "${nombre}" (${telefono}) del reparto familiar?`)) {
         delete estado.usuarios[telefono];
+        try { if (typeof NUBE_marcarBorrado === 'function') NUBE_marcarBorrado('usr', telefono); } catch (e) {}
         guardarLocalmente();
         api(`/api/usuarios/${telefono}`, 'DELETE').catch(() => {});
 
@@ -1427,6 +1432,7 @@ async function guardarOperacion(e) {
         const index = estado.transacciones.findIndex(t => t.id == id);
         if (index !== -1) {
             estado.transacciones[index] = { ...estado.transacciones[index], ...payload };
+            estado.transacciones[index]._mod = Date.now();
         }
         guardarLocalmente();
         api(`/api/transaccion/${id}`, 'PUT', payload).catch(() => {});
@@ -1471,6 +1477,7 @@ function editarOperacion(id) {
 async function confirmarEliminarOperacion(id) {
     if (confirm('¿Seguro que deseas eliminar este movimiento?')) {
         estado.transacciones = estado.transacciones.filter(t => t.id !== id);
+        try { if (typeof NUBE_marcarBorrado === 'function') NUBE_marcarBorrado('tx', id); } catch (e) {}
         guardarLocalmente();
         api(`/api/transaccion/${id}`, 'DELETE').catch(() => {});
         mostrarToast('Movimiento eliminado', 'success');
@@ -1508,6 +1515,7 @@ async function guardarRecurrente(e) {
         const index = estado.recurrentes.findIndex(r => r.id == id);
         if (index !== -1) {
             estado.recurrentes[index] = { ...estado.recurrentes[index], ...payload };
+            estado.recurrentes[index]._mod = Date.now();
         }
         guardarLocalmente();
         api(`/api/recurrente/${id}`, 'PUT', payload).catch(() => {});
@@ -1533,6 +1541,7 @@ function editarRecurrente(id) {
 async function eliminarRecurrente(id) {
     if (confirm('¿Eliminar este concepto fijo periódico?')) {
         estado.recurrentes = estado.recurrentes.filter(r => r.id !== id);
+        try { if (typeof NUBE_marcarBorrado === 'function') NUBE_marcarBorrado('rec', id); } catch (e) {}
         guardarLocalmente();
         api(`/api/recurrente/${id}`, 'DELETE').catch(() => {});
         mostrarToast('Gasto fijo eliminado', 'success');
@@ -1601,6 +1610,7 @@ async function importarJSON(e) {
             if (contenido.usuarios) estado.usuarios = contenido.usuarios;
 
             guardarLocalmente();
+            try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
             api('/api/importar', 'POST', contenido).catch(() => {});
             mostrarToast('¡Datos importados con éxito!', 'success');
             inicializarSelectorMeses();
@@ -1620,6 +1630,7 @@ async function restablecerDatosSimulados() {
         estado.metasPorMes = JSON.parse(JSON.stringify(DATOS_DEMO.metasPorMes));
         estado.usuarios = JSON.parse(JSON.stringify(DATOS_DEMO.usuarios));
         guardarLocalmente();
+        try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
         api('/api/simular', 'POST').catch(() => {});
         mostrarToast('¡Datos de prueba cargados correctamente!', 'success');
         inicializarSelectorMeses();

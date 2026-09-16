@@ -1,5 +1,5 @@
 /* Gestor de Gastos — Service Worker PWA (offline-first, multi-plataforma) */
-const CACHE_VERSION = 'gestor-gastos-v1.0.0';
+const CACHE_VERSION = 'gestor-gastos-v1.1.0';
 const STATIC_CACHE = CACHE_VERSION + '-static';
 const RUNTIME_CACHE = CACHE_VERSION + '-runtime';
 
@@ -9,6 +9,8 @@ const PRECACHE_URLS = [
   './manifest.json',
   './style.css',
   './app.js',
+  './nube-config.js',
+  './nube.js',
   './offline.html',
   './icons/icon-72.png',
   './icons/icon-96.png',
