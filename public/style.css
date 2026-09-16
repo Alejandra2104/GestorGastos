@@ -23,8 +23,8 @@
     --warning-light: #fef3c7;
     --warning-text: #92400e;
     
-    --info: #0284c7;
-    --info-light: #e0f2fe;
+    --info: #3E6B4E;
+    --info-light: #E3EDE6;
     
     /* Variables de Tema Claro (Predeterminado) */
     --bg-base: #f8fafc;
@@ -35,7 +35,7 @@
     --border-subtle: #f1f5f9;
     --text-primary: #0f172a;
     --text-secondary: #475569;
-    --text-muted: #94a3b8;
+    --text-muted: #9AA1AD;
     --glass-bg: rgba(255, 255, 255, 0.85);
     --glass-border: rgba(255, 255, 255, 0.6);
     
@@ -63,8 +63,8 @@ body.dark-mode {
     --border-color: #24304f;
     --border-subtle: #1a233a;
     --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
+    --text-secondary: #9AA1AD;
+    --text-muted: #6B7280;
     --glass-bg: rgba(19, 27, 46, 0.85);
     --glass-border: rgba(255, 255, 255, 0.08);
     
@@ -675,7 +675,7 @@ body {
 .banner-advice {
     background: var(--info-light);
     border-left-color: var(--info);
-    color: #0369a1;
+    color: #3E6B4E;
 }
 
 .prorate-controls {
@@ -1071,7 +1071,7 @@ body.dark-mode .pill-recurring {
 
 .cal-event-fijo {
     background: var(--info-light);
-    color: #0369a1;
+    color: #3E6B4E;
 }
 
 /* ==========================================================================

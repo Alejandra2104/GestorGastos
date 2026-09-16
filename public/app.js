@@ -9,15 +9,15 @@
 
 const CATEGORIAS_CONFIG = {
     "Alimentación": { icon: "🛒", color: "#10b981", desc: "Supermercados, frutería, carnicería" },
-    "Vivienda": { icon: "🏠", color: "#6366f1", desc: "Alquiler, hipoteca, comunidad" },
-    "Transporte": { icon: "🚗", color: "#0284c7", desc: "Gasolina, coche, transporte público" },
+    "Vivienda": { icon: "🏠", color: "#7C8A4D", desc: "Alquiler, hipoteca, comunidad" },
+    "Transporte": { icon: "🚗", color: "#6E8B74", desc: "Gasolina, coche, transporte público" },
     "Suministros": { icon: "💡", color: "#f59e0b", desc: "Luz, agua, gas, internet, móvil" },
     "Moda y Estética": { icon: "👗", color: "#ec4899", desc: "Ropa, calzado, peluquería" },
-    "Ocio y Actividades": { icon: "🍿", color: "#8b5cf6", desc: "Restaurantes, viajes, cine, suscripciones" },
+    "Ocio y Actividades": { icon: "🍿", color: "#B08968", desc: "Restaurantes, viajes, cine, suscripciones" },
     "Salud y Cuidado": { icon: "💊", color: "#14b8a6", desc: "Farmacia, médico, dentista, gimnasio" },
-    "Banco y Seguros": { icon: "🏦", color: "#64748b", desc: "Nóminas, comisiones, pólizas" },
-    "Otros": { icon: "📦", color: "#a855f7", desc: "Compras varias, regalos, imprevistos" },
-    "General": { icon: "📁", color: "#94a3b8", desc: "Categoría general" }
+    "Banco y Seguros": { icon: "🏦", color: "#6B7280", desc: "Nóminas, comisiones, pólizas" },
+    "Otros": { icon: "📦", color: "#9AA38B", desc: "Compras varias, regalos, imprevistos" },
+    "General": { icon: "📁", color: "#9AA1AD", desc: "Categoría general" }
 };
 
 const DATOS_INICIALES = { usuarios: {}, metasPorMes: {}, recurrentes: [], transacciones: [] };
@@ -549,8 +549,10 @@ function renderHeroAndKpis() {
 // ==========================================================================
 
 function renderMetaAhorro() {
-    const meta = estado.metasPorMes[estado.mesSeleccionado] !== undefined ? estado.metasPorMes[estado.mesSeleccionado] : 300;
-    document.getElementById('inputMetaAhorro').value = meta;
+    const metaGuardada = estado.metasPorMes[estado.mesSeleccionado];
+    const tieneMeta = metaGuardada !== undefined && metaGuardada > 0;
+    const meta = tieneMeta ? metaGuardada : 0;
+    document.getElementById('inputMetaAhorro').value = tieneMeta ? meta : '';
 
     const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
     const ops = obtenerOperacionesMes(anio, mesNum);
@@ -567,6 +569,16 @@ function renderMetaAhorro() {
     const lblPorcentaje = document.getElementById('lblMetaPorcentaje');
     const bannerCelebracion = document.getElementById('bannerCelebracion');
     const bannerDeficit = document.getElementById('bannerDeficit');
+
+    if (!tieneMeta) {
+        progressEl.style.width = '0%';
+        progressEl.classList.remove('overachieved');
+        lblAhorrado.textContent = `Ahorro del mes: ${balanceActual.toLocaleString('es-ES', { minimumFractionDigits: 2 })} € · fija tu meta arriba`;
+        lblPorcentaje.textContent = 'Sin meta fijada';
+        bannerCelebracion.style.display = 'none';
+        bannerDeficit.style.display = 'none';
+        return;
+    }
 
     const porcentaje = meta > 0 ? Math.max(0, Math.round((balanceActual / meta) * 100)) : 100;
     progressEl.style.width = `${Math.min(100, Math.max(0, porcentaje))}%`;
@@ -588,7 +600,11 @@ function renderMetaAhorro() {
 }
 
 function actualizarCalculoProrrateo() {
-    const meta = parseFloat(document.getElementById('inputMetaAhorro').value) || 300;
+    const meta = parseFloat(document.getElementById('inputMetaAhorro').value);
+    if (isNaN(meta) || meta <= 0) {
+        document.getElementById('lblProrrateoDetalle').innerHTML = 'Fija primero una meta válida para calcular el plan de recuperación.';
+        return;
+    }
     const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
     const ops = obtenerOperacionesMes(anio, mesNum);
     let totalIng = 0;
@@ -609,7 +625,11 @@ function actualizarCalculoProrrateo() {
 }
 
 async function aplicarPlanProrrateo() {
-    const meta = parseFloat(document.getElementById('inputMetaAhorro').value) || 300;
+    const meta = parseFloat(document.getElementById('inputMetaAhorro').value);
+    if (isNaN(meta) || meta <= 0) {
+        mostrarToast('Fija primero una meta válida', 'danger');
+        return;
+    }
     const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
     const ops = obtenerOperacionesMes(anio, mesNum);
     let totalIng = 0, totalGas = 0;
@@ -643,8 +663,8 @@ async function aplicarPlanProrrateo() {
 
 async function guardarMetaAhorro() {
     const nuevaMeta = parseFloat(document.getElementById('inputMetaAhorro').value);
-    if (isNaN(nuevaMeta) || nuevaMeta < 0) {
-        mostrarToast('Introduce una meta válida', 'danger');
+    if (isNaN(nuevaMeta) || nuevaMeta <= 0) {
+        mostrarToast('Introduce una meta mayor que 0', 'danger');
         return;
     }
 
@@ -745,7 +765,7 @@ function renderCharts() {
             const strokeOffset = -accumulatedDash;
             accumulatedDash += strokeDash;
 
-            const config = CATEGORIAS_CONFIG[cat] || { icon: "📁", color: "#6366f1" };
+            const config = CATEGORIAS_CONFIG[cat] || { icon: "📁", color: "#9AA1AD" };
             svgPaths += `
                 <circle cx="80" cy="80" r="${radius}" fill="transparent" 
                     stroke="${config.color}" stroke-width="24"
@@ -891,7 +911,7 @@ function renderTransacciones() {
     }
 
     filtradas.forEach(t => {
-        const catConfig = CATEGORIAS_CONFIG[t.categoria] || { icon: "📁", color: "#6366f1" };
+        const catConfig = CATEGORIAS_CONFIG[t.categoria] || { icon: "📁", color: "#9AA1AD" };
         const nombreUsuario = estado.usuarios[t.telefono] || t.telefono;
         const fechaFormat = new Date(t.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
         const esIngreso = t.tipo === 'ingreso';
@@ -1046,7 +1066,7 @@ function abrirModalDia(dia, mes, anio, transacciones) {
             if (t.tipo === 'ingreso') totalDiaIng += t.cantidad;
             else totalDiaGas += t.cantidad;
 
-            const config = CATEGORIAS_CONFIG[t.categoria] || { icon: "📁", color: "#6366f1" };
+            const config = CATEGORIAS_CONFIG[t.categoria] || { icon: "📁", color: "#9AA1AD" };
             container.innerHTML += `
                 <div class="transaction-item" style="padding: 8px 10px;">
                     <div class="tx-left">
@@ -1099,7 +1119,7 @@ function renderRecurrentes() {
             else totalGastosFijos += r.cantidad;
         }
 
-        const catConfig = CATEGORIAS_CONFIG[r.categoria] || { icon: "📁", color: "#6366f1" };
+        const catConfig = CATEGORIAS_CONFIG[r.categoria] || { icon: "📁", color: "#9AA1AD" };
         const card = document.createElement('div');
         card.className = 'recurring-card';
 
