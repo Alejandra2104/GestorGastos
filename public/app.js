@@ -16,7 +16,7 @@ const CATEGORIAS_CONFIG = {
     "Ocio y Actividades": { icon: "🍿", color: "#8b5cf6", desc: "Restaurantes, viajes, cine, suscripciones" },
     "Salud y Cuidado": { icon: "💊", color: "#06b6d4", desc: "Farmacia, médico, dentista, gimnasio" },
     "Banco y Seguros": { icon: "🏦", color: "#64748b", desc: "Nóminas, comisiones, pólizas" },
-    "Otros": { icon: "📦", color: "#a855f7", desc: "Compras varias, regalos, imprevistos" },
+    "Otros": { icon: "📦", color: "#f472b6", desc: "Compras varias, regalos, imprevistos" },
     "General": { icon: "📁", color: "#94a3b8", desc: "Categoría general" }
 };
 
