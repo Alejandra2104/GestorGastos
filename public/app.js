@@ -20,7 +20,10 @@ const CATEGORIAS_CONFIG = {
     "General": { icon: "📁", color: "#94a3b8", desc: "Categoría general" }
 };
 
-const DATOS_INICIALES = {
+const DATOS_INICIALES = { usuarios: {}, metasPorMes: {}, recurrentes: [], transacciones: [] };
+
+// Datos de ejemplo (botón "Cargar Datos de Demostración"). Ya NO se cargan solos.
+const DATOS_DEMO = {
     usuarios: {
         "600111222": "Alejandro",
         "600333444": "Laura (Pareja)"
@@ -1265,11 +1268,7 @@ async function agregarNuevoUsuario(e) {
 
 // Eliminar teléfono / miembro
 async function eliminarUsuario(telefono) {
-    if (Object.keys(estado.usuarios).length <= 1) {
-        mostrarToast('Debe haber al menos un miembro registrado en la aplicación', 'danger');
-        return;
-    }
-
+    // Se permite quedar a cero (inicio limpio para nuevos usuarios).
     const nombre = estado.usuarios[telefono] || telefono;
     if (confirm(`¿Seguro que deseas eliminar a "${nombre}" (${telefono}) del reparto familiar?`)) {
         delete estado.usuarios[telefono];
@@ -1400,6 +1399,12 @@ async function guardarOperacion(e) {
     const categoria = document.getElementById('opCategoria').value;
     const fecha = document.getElementById('opFecha').value;
     const telefono = document.getElementById('opTelefono').value;
+    if (!telefono) {
+        mostrarToast('Añade primero un miembro en "Reparto Familiar".', 'danger');
+        cerrarModal('modalOperacion');
+        cambiarTab('split');
+        return;
+    }
     const esCompartido = document.getElementById('opEsCompartido').checked;
     const esFijo = document.getElementById('opEsFijo').checked;
 
@@ -1610,10 +1615,10 @@ async function importarJSON(e) {
 
 async function restablecerDatosSimulados() {
     if (confirm('¿Restablecer datos de prueba?')) {
-        estado.transacciones = JSON.parse(JSON.stringify(DATOS_INICIALES.transacciones));
-        estado.recurrentes = JSON.parse(JSON.stringify(DATOS_INICIALES.recurrentes));
-        estado.metasPorMes = JSON.parse(JSON.stringify(DATOS_INICIALES.metasPorMes));
-        estado.usuarios = JSON.parse(JSON.stringify(DATOS_INICIALES.usuarios));
+        estado.transacciones = JSON.parse(JSON.stringify(DATOS_DEMO.transacciones));
+        estado.recurrentes = JSON.parse(JSON.stringify(DATOS_DEMO.recurrentes));
+        estado.metasPorMes = JSON.parse(JSON.stringify(DATOS_DEMO.metasPorMes));
+        estado.usuarios = JSON.parse(JSON.stringify(DATOS_DEMO.usuarios));
         guardarLocalmente();
         api('/api/simular', 'POST').catch(() => {});
         mostrarToast('¡Datos de prueba cargados correctamente!', 'success');

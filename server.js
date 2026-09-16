@@ -34,10 +34,7 @@ function leerDatos() {
             transacciones: [],
             recurrentes: [],
             metasPorMes: {},
-            usuarios: {
-                "600111222": "Alejandro",
-                "600333444": "Pareja / Familiar"
-            }
+            usuarios: {}
         };
         guardarDatos(datosIniciales);
         return datosIniciales;
