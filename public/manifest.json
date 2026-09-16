@@ -14,72 +14,72 @@
   "categories": ["finance", "productivity", "utilities"],
   "icons": [
     {
-      "src": "icons/icon-72.png",
+      "src": "icons/icon-72.png?v=1.3.0",
       "sizes": "72x72",
       "type": "image/png"
     },
     {
-      "src": "icons/icon-96.png",
+      "src": "icons/icon-96.png?v=1.3.0",
       "sizes": "96x96",
       "type": "image/png"
     },
     {
-      "src": "icons/icon-128.png",
+      "src": "icons/icon-128.png?v=1.3.0",
       "sizes": "128x128",
       "type": "image/png"
     },
     {
-      "src": "icons/icon-144.png",
+      "src": "icons/icon-144.png?v=1.3.0",
       "sizes": "144x144",
       "type": "image/png"
     },
     {
-      "src": "icons/icon-152.png",
+      "src": "icons/icon-152.png?v=1.3.0",
       "sizes": "152x152",
       "type": "image/png"
     },
     {
-      "src": "icons/icon-167.png",
+      "src": "icons/icon-167.png?v=1.3.0",
       "sizes": "167x167",
       "type": "image/png"
     },
     {
-      "src": "icons/icon-180.png",
+      "src": "icons/icon-180.png?v=1.3.0",
       "sizes": "180x180",
       "type": "image/png"
     },
     {
-      "src": "icons/icon-192.png",
+      "src": "icons/icon-192.png?v=1.3.0",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-384.png",
+      "src": "icons/icon-384.png?v=1.3.0",
       "sizes": "384x384",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "icons/icon-512.png?v=1.3.0",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/maskable-512.png",
+      "src": "icons/maskable-512.png?v=1.3.0",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "icon-192.png",
+      "src": "icon-192.png?v=1.3.0",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "icon-512.png?v=1.3.0",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
@@ -91,33 +91,33 @@
       "short_name": "Añadir",
       "description": "Registrar un gasto o ingreso rápidamente",
       "url": "./index.html?action=nuevo&utm_source=pwa-shortcut",
-      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icons/icon-192.png?v=1.3.0", "sizes": "192x192" }]
     },
     {
       "name": "Calendario",
       "short_name": "Calendario",
       "description": "Ver el calendario de movimientos",
       "url": "./index.html?tab=calendario&utm_source=pwa-shortcut",
-      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icons/icon-192.png?v=1.3.0", "sizes": "192x192" }]
     },
     {
       "name": "Reparto familiar",
       "short_name": "Reparto",
       "description": "Ver saldos compartidos",
       "url": "./index.html?tab=split&utm_source=pwa-shortcut",
-      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "icons/icon-192.png?v=1.3.0", "sizes": "192x192" }]
     }
   ],
   "screenshots": [
     {
-      "src": "icons/icon-512.png",
+      "src": "icons/icon-512.png?v=1.3.0",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Panel principal del Gestor de Gastos"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "icons/icon-512.png?v=1.3.0",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "wide",

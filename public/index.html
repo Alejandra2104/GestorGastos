@@ -513,6 +513,12 @@
                 <button class="btn btn-outline" style="border-color: var(--warning); color: var(--warning-text);" onclick="restablecerDatosSimulados()">
                     ⚡ Cargar Datos de Demostración
                 </button>
+
+                <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
+
+                <p style="font-size:.8rem;color:var(--text-secondary);margin:0">
+                    📦 Versión <strong>1.3.0</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
+                </p>
             </div>
         </main>
     </div>
@@ -722,18 +728,37 @@
       const badge = document.getElementById('offlineBadge');
       function syncOnline(){ badge.style.display = navigator.onLine ? 'none' : 'block'; }
       window.addEventListener('online', syncOnline); window.addEventListener('offline', syncOnline); syncOnline();
-      // Aviso de actualización del Service Worker
+      // Actualización sin reinstalar: busca novedades al abrir, al volver,
+      // al recuperar internet y cada 30 min. Si hay nueva versión, muestra
+      // la barra "Hay una nueva versión" y se aplica con un toque.
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
-        navigator.serviceWorker.ready.then((reg) => {
-          if (reg.waiting) document.getElementById('pwaUpdateBar').style.display = 'flex';
-          reg.addEventListener('updatefound', () => {
-            const nw = reg.installing;
-            if (nw) nw.addEventListener('statechange', () => {
-              if (nw.state === 'installed' && navigator.serviceWorker.controller) document.getElementById('pwaUpdateBar').style.display = 'flex';
-            });
+        const updateBar = document.getElementById('pwaUpdateBar');
+        const showUpdate = () => { if (updateBar) updateBar.style.display = 'flex'; };
+        const trackWorker = (reg) => {
+          const nw = reg.installing;
+          if (nw) nw.addEventListener('statechange', () => {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) showUpdate();
           });
-        });
+        };
+        const checkUpdate = () => {
+          try {
+            navigator.serviceWorker.ready.then((reg) => {
+              if (reg.waiting) { showUpdate(); return; }
+              trackWorker(reg);
+              if (typeof reg.update === 'function') reg.update().catch(() => {});
+            }).catch(() => {});
+          } catch (e) {}
+        };
+        navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
+        try {
+          navigator.serviceWorker.ready.then((reg) => {
+            reg.addEventListener('updatefound', () => trackWorker(reg));
+            checkUpdate();
+          }).catch(() => {});
+        } catch (e) {}
+        document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkUpdate(); });
+        window.addEventListener('online', checkUpdate);
+        setInterval(checkUpdate, 30 * 60 * 1000);
         document.getElementById('pwaUpdateBtn').addEventListener('click', () => {
           navigator.serviceWorker.ready.then((reg) => { if (reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'}); else window.location.reload(); });
         });
