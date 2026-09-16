@@ -3,11 +3,11 @@
    ========================================================================== */
 
 :root {
-    --primary: #4f46e5;
-    --primary-hover: #4338ca;
-    --primary-light: #818cf8;
-    --primary-surface: rgba(79, 70, 229, 0.08);
-    --primary-glow: rgba(79, 70, 229, 0.25);
+    --primary: #7c3aed;
+    --primary-hover: #6d28d9;
+    --primary-light: #c4b5fd;
+    --primary-surface: rgba(124, 58, 237, 0.10);
+    --primary-glow: rgba(124, 58, 237, 0.30);
     
     --success: #10b981;
     --success-hover: #059669;
@@ -27,15 +27,15 @@
     --info-light: #e0f2fe;
     
     /* Variables de Tema Claro (Predeterminado) */
-    --bg-base: #f8fafc;
+    --bg-base: #f6f2ff;
     --bg-card: #ffffff;
-    --bg-card-hover: #f1f5f9;
+    --bg-card-hover: #f0e8ff;
     --bg-input: #ffffff;
-    --border-color: #e2e8f0;
-    --border-subtle: #f1f5f9;
-    --text-primary: #0f172a;
-    --text-secondary: #475569;
-    --text-muted: #9AA1AD;
+    --border-color: #e3d7fb;
+    --border-subtle: #efe7ff;
+    --text-primary: #2b2144;
+    --text-secondary: #6f6391;
+    --text-muted: #a89ccf;
     --glass-bg: rgba(255, 255, 255, 0.85);
     --glass-border: rgba(255, 255, 255, 0.6);
     
@@ -56,19 +56,19 @@
 
 /* Tema Oscuro */
 body.dark-mode {
-    --bg-base: #090d16;
-    --bg-card: #131b2e;
-    --bg-card-hover: #1c2742;
-    --bg-input: #1a233a;
-    --border-color: #24304f;
-    --border-subtle: #1a233a;
-    --text-primary: #f8fafc;
-    --text-secondary: #9AA1AD;
-    --text-muted: #6B7280;
+    --bg-base: #130f24;
+    --bg-card: #1e1740;
+    --bg-card-hover: #2b2158;
+    --bg-input: #251c4d;
+    --border-color: #3b2f6b;
+    --border-subtle: #251c4d;
+    --text-primary: #f5f0ff;
+    --text-secondary: #b9aee0;
+    --text-muted: #8b7fb8;
     --glass-bg: rgba(19, 27, 46, 0.85);
     --glass-border: rgba(255, 255, 255, 0.08);
     
-    --primary-surface: rgba(99, 102, 241, 0.15);
+    --primary-surface: rgba(139, 92, 246, 0.18);
     --success-light: rgba(16, 185, 129, 0.15);
     --success-text: #34d399;
     --danger-light: rgba(239, 68, 68, 0.15);
@@ -138,7 +138,7 @@ body {
 .brand-icon {
     width: 44px;
     height: 44px;
-    background: linear-gradient(135deg, var(--primary), #818cf8);
+    background: linear-gradient(135deg, var(--primary), #a855f7);
     color: white;
     border-radius: var(--radius-md);
     display: flex;
@@ -238,7 +238,7 @@ body {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--primary), #6366f1);
+    background: linear-gradient(135deg, #7c3aed, #9333ea);
     color: white;
     box-shadow: 0 4px 12px var(--primary-glow);
 }
@@ -414,14 +414,14 @@ body {
 
 /* Tarjeta Principal de Balance */
 .hero-balance-card {
-    background: linear-gradient(135deg, #3730a3 0%, #4f46e5 50%, #6366f1 100%);
+    background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a855f7 100%);
     color: white;
     border-radius: 22px;
     padding: 28px 24px;
     margin-bottom: 24px;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 12px 30px -5px rgba(79, 70, 229, 0.35);
+    box-shadow: 0 12px 30px -5px rgba(124, 58, 237, 0.40);
     border: none;
 }
 
@@ -631,13 +631,13 @@ body {
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--primary), var(--success));
+    background: linear-gradient(90deg, #7c3aed, #d946ef);
     border-radius: var(--radius-full);
     transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .progress-fill.overachieved {
-    background: linear-gradient(90deg, #10b981, #059669);
+    background: linear-gradient(90deg, #9333ea, #6d28d9);
 }
 
 .goal-status-labels {
@@ -673,9 +673,15 @@ body {
 }
 
 .banner-advice {
-    background: var(--info-light);
-    border-left-color: var(--info);
-    color: #0369a1;
+    background: #f3e8ff;
+    border-left-color: var(--primary);
+    color: #6d28d9;
+}
+
+body.dark-mode .banner-advice {
+    background: rgba(139, 92, 246, 0.15);
+    border-left-color: #a855f7;
+    color: #d8c8ff;
 }
 
 .prorate-controls {
@@ -877,23 +883,23 @@ body {
 }
 
 .pill-shared {
-    background: #e0e7ff;
-    color: #1e40af;
+    background: #ede4ff;
+    color: #5b21b6;
 }
 
 body.dark-mode .pill-shared {
-    background: rgba(99, 102, 241, 0.2);
-    color: #93c5fd;
+    background: rgba(139, 92, 246, 0.22);
+    color: #d8c8ff;
 }
 
 .pill-recurring {
-    background: #e0e7ff;
-    color: #1e40af;
+    background: #ede4ff;
+    color: #5b21b6;
 }
 
 body.dark-mode .pill-recurring {
-    background: rgba(30, 64, 175, 0.25);
-    color: #93c5fd;
+    background: rgba(139, 92, 246, 0.22);
+    color: #d8c8ff;
 }
 
 .pill-user {
@@ -1070,8 +1076,13 @@ body.dark-mode .pill-recurring {
 }
 
 .cal-event-fijo {
-    background: var(--info-light);
-    color: #0369a1;
+    background: #f3e8ff;
+    color: #6d28d9;
+}
+
+body.dark-mode .cal-event-fijo {
+    background: rgba(139, 92, 246, 0.18);
+    color: #d8c8ff;
 }
 
 /* ==========================================================================
@@ -1105,7 +1116,7 @@ body.dark-mode .pill-recurring {
    ========================================================================== */
 
 .split-summary-box {
-    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    background: linear-gradient(135deg, #2e1065 0%, #6d28d9 100%);
     color: white;
     padding: 24px;
     border-radius: var(--radius-lg);

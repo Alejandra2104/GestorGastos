@@ -45,18 +45,18 @@ const favIcon = icon192 || appleIcon;
 // ---------- 3. CSS extra del instalador (autónomo) ----------
 const installerCSS = `
 /* ===== Instalador portable (inyectado por build) ===== */
-#portableBar{background:#0f172a;color:#e2e8f0;text-align:center;font-size:.78rem;padding:8px 12px;line-height:1.5}
+#portableBar{background:#2b2144;color:#ede4ff;text-align:center;font-size:.78rem;padding:8px 12px;line-height:1.5}
 #portableBar code{background:rgba(255,255,255,.12);padding:1px 6px;border-radius:6px}
-#portableBar button{margin-left:8px;border:none;border-radius:999px;padding:6px 14px;font-weight:800;cursor:pointer;background:#fff;color:#0f172a}
-.btn-install{background:linear-gradient(135deg,#4f46e5,#7c3aed)!important;color:#fff!important;border:none!important;box-shadow:0 4px 14px rgba(79,70,229,.4)}
+#portableBar button{margin-left:8px;border:none;border-radius:999px;padding:6px 14px;font-weight:800;cursor:pointer;background:#fff;color:#2b2144}
+.btn-install{background:linear-gradient(135deg,#6d28d9,#a855f7)!important;color:#fff!important;border:none!important;box-shadow:0 4px 14px rgba(124,58,237,.4)}
 #modalInstalar .modal-container{max-width:640px}
 .inst-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
 .inst-tabs button{border:1px solid var(--border-color);background:var(--bg-card-hover);color:var(--text-primary);border-radius:999px;padding:7px 13px;font-size:.8rem;font-weight:700;cursor:pointer}
-.inst-tabs button.active{background:#4f46e5;border-color:#4f46e5;color:#fff}
+.inst-tabs button.active{background:#7c3aed;border-color:#7c3aed;color:#fff}
 .inst-panel{display:none;background:var(--bg-card-hover);border:1px solid var(--border-color);border-radius:12px;padding:14px 16px;font-size:.86rem;line-height:1.65}
 .inst-panel.active{display:block}
 .inst-panel ol{margin:6px 0 6px 20px;padding:0}
-.inst-panel kbd{background:#0f172a;color:#fff;border-radius:6px;padding:1px 7px;font-size:.76rem;font-family:inherit}
+.inst-panel kbd{background:#2b2144;color:#fff;border-radius:6px;padding:1px 7px;font-size:.76rem;font-family:inherit}
 .inst-actions{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 4px}
 .inst-actions .btn{flex:1;min-width:160px;justify-content:center;display:inline-flex;align-items:center;gap:8px}
 .inst-note{font-size:.78rem;color:var(--text-secondary);line-height:1.6;background:var(--primary-surface);border-radius:10px;padding:10px 12px;margin-top:12px}
@@ -261,8 +261,8 @@ let installerJS = `
         scope: ".",
         display: "standalone",
         orientation: "portrait-primary",
-        background_color: "#f8fafc",
-        theme_color: "#4f46e5",
+        background_color: "#f6f2ff",
+        theme_color: "#7c3aed",
         lang: "es",
         icons: [
           { src: __icon192, sizes: "192x192", type: "image/png", purpose: "any" },
