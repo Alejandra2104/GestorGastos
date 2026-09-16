@@ -9,7 +9,7 @@
 
     <!-- ===== PWA / Instalable multi-plataforma ===== -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4E7D5C" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#090d16" media="(prefers-color-scheme: dark)">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="application-name" content="GestorGastos">
@@ -22,10 +22,10 @@
     <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
     <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
     <link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png">
-    <link rel="mask-icon" href="icons/icon-192.png" color="#4E7D5C">
+    <link rel="mask-icon" href="icons/icon-192.png" color="#4f46e5">
 
     <!-- Windows / Edge -->
-    <meta name="msapplication-TileColor" content="#4E7D5C">
+    <meta name="msapplication-TileColor" content="#4f46e5">
     <meta name="msapplication-TileImage" content="icons/icon-144.png">
     <meta name="msapplication-config" content="browserconfig.xml">
 
@@ -53,20 +53,20 @@
     <link rel="stylesheet" href="style.css">
     <style>
       /* Banner de instalación PWA + estado offline (ligero, no depende de style.css) */
-      #pwaInstallBar{display:none;position:sticky;top:0;z-index:900;background:linear-gradient(135deg,#4E7D5C,#3E6B4E);color:#fff;padding:10px 14px;font-size:.88rem;box-shadow:0 4px 14px rgba(78,125,92,.35)}
+      #pwaInstallBar{display:none;position:sticky;top:0;z-index:900;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:10px 14px;font-size:.88rem;box-shadow:0 4px 14px rgba(79,70,229,.35)}
       #pwaInstallBar .row{max-width:1100px;margin:0 auto;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
       #pwaInstallBar button{border:none;border-radius:999px;padding:8px 16px;font-weight:800;cursor:pointer}
-      #pwaInstallBtn{background:#fff;color:#4E7D5C}
+      #pwaInstallBtn{background:#fff;color:#4f46e5}
       #pwaDismissBtn{background:rgba(255,255,255,.2);color:#fff}
       #pwaUpdateBar{display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:1200;background:#0f172a;color:#fff;padding:10px 14px;border-radius:12px;font-size:.85rem;box-shadow:0 10px 25px rgba(0,0,0,.3);gap:10px;align-items:center}
-      #pwaUpdateBar button{background:#4E7D5C;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer}
+      #pwaUpdateBar button{background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer}
       #offlineBadge{display:none;position:fixed;bottom:16px;right:16px;z-index:1200;background:#92400e;color:#fef3c7;padding:8px 12px;border-radius:999px;font-size:.78rem;font-weight:700}
       #iosHelp{display:none;position:fixed;inset:auto 12px 12px 12px;z-index:1200;background:#fff;color:#0f172a;border:1px solid #e2e8f0;border-radius:14px;padding:14px;font-size:.85rem;box-shadow:0 20px 40px rgba(0,0,0,.2)}
       body.dark-mode #iosHelp{background:#131b2e;color:#f8fafc;border-color:#24304f}
       #modoBadge{display:inline-block;margin-top:4px;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:999px;background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
       #modoBadge[data-modo="server"]{background:#dcfce7;color:#166534;border-color:#bbf7d0}
       #modoBadge[data-modo="local"]{background:#fef9c3;color:#854d0e;border-color:#fde68a}
-      body.dark-mode #modoBadge{background:#1a233a;color:#A9C7B2;border-color:#24304f}
+      body.dark-mode #modoBadge{background:#1a233a;color:#a5b4fc;border-color:#24304f}
       body.dark-mode #modoBadge[data-modo="local"]{background:#3b2f0b;color:#fde68a;border-color:#854d0e}
     </style>
 </head>
@@ -197,7 +197,7 @@
                 <div class="kpi-box">
                     <div class="kpi-box-top">
                         <span class="title">Gastos Fijos Programados</span>
-                        <span class="kpi-badge" style="background: var(--info-light); color: #3E6B4E;">Fijo</span>
+                        <span class="kpi-badge" style="background: var(--info-light); color: #0369a1;">Fijo</span>
                     </div>
                     <h3 id="valKpiFijosTotal">0.00 €</h3>
                     <small id="lblKpiFijosCount">0 conceptos al mes</small>
@@ -517,7 +517,7 @@
                 <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
 
                 <p style="font-size:.8rem;color:var(--text-secondary);margin:0">
-                    📦 Versión <strong>1.5.0</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
+                    📦 Versión <strong>1.6.0</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
                 </p>
             </div>
         </main>
