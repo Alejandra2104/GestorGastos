@@ -1,8 +1,8 @@
 # 📲 Gestor de Gastos — App instalable (Windows · macOS · Linux · Android · iOS)
 
-> 🟢 **HTTPS ACTIVO AHORA MISMO** — abre `URL-HTTPS.txt` (o escanea `QR-APP.png`
-> con el iPhone) e instala desde ahí. Se mantiene con `npm run https`.
-> Mientras ese túnel esté abierto, Windows y iPhone comparten los mismos datos.
+> 🟢 **URL FIJA PERMANENTE: https://alejandra2104.github.io/GestorGastos/**
+> Instala desde ahí en Windows y iPhone. El PC puede estar apagado.
+> (El túnel temporal `npm run https` / `URL-HTTPS.txt` ya no hace falta.)
 > Para no depender del PC, sigue **“HTTPS permanente”** más abajo (5 min, gratis).
 
 Tienes **3 formas** de usar la app. Elige la que prefieras:
