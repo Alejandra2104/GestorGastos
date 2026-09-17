@@ -696,7 +696,7 @@ function renderMetaCompartidaUI() {
     const defaultPct = members.length <= 1 ? 100 : Math.round(100 / members.length);
     listDiv.innerHTML = members.map(([tel, nom]) => {
         const pct = split[tel] !== undefined ? split[tel] : defaultPct;
-        return `<label style="display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:.82rem;"><span style="min-width:120px;font-weight:600;">${nom} (${tel})</span><input type="number" min="0" max="100" step="5" value="${pct}" style="width:60px;padding:3px 6px;font-size:.8rem;" data-tel="${tel}" class="pct-input" oninput="ajustarPorcentajes(this)"></label>`;
+        return `<label style="display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:.82rem;"><input type="checkbox" checked data-tel="${tel}" class="pct-check" onchange="ajustarSeleccion(${tel})"><span style="min-width:120px;font-weight:600;">${nom} (${tel})</span><input type="number" min="0" max="100" step="5" value="${pct}" style="width:60px;padding:3px 6px;font-size:.8rem;" data-tel="${tel}" class="pct-input" oninput="ajustarPorcentajes(this)"></label>`;
     }).join('');
     document.getElementById('metaCompartidaSection').style.display = (document.getElementById('opMetaCompartida') && document.getElementById('opMetaCompartida').checked) ? 'block' : 'none';
 }
