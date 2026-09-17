@@ -86,6 +86,8 @@ const estado = {
     recurrentes: [],
     metasPorMes: {},
     metasCompartidas: {},
+    planesAmortizacion: [],
+    repartoPredeterminado: {},
     usuarios: {},
     _borrados: {},
     mesSeleccionado: claveMesActual(),
@@ -95,7 +97,8 @@ const estado = {
         busqueda: "",
         tipo: "todos",
         categoria: "todas",
-        usuario: "todos"
+        usuario: "todos",
+        formaPago: "todos"
     }
 };
 
@@ -110,7 +113,10 @@ function guardarLocalmente() {
             recurrentes: estado.recurrentes,
             metasPorMes: estado.metasPorMes,
             metasCompartidas: estado.metasCompartidas || {},
-            usuarios: estado.usuarios
+            planesAmortizacion: estado.planesAmortizacion || [],
+            repartoPredeterminado: estado.repartoPredeterminado || {},
+            usuarios: estado.usuarios,
+            _borrados: estado._borrados || {}
         };
         localStorage.setItem('gestor_gastos_db', JSON.stringify(payload));
     } catch (e) {
@@ -128,6 +134,8 @@ function cargarLocalmente() {
             if (Array.isArray(parsed.recurrentes)) estado.recurrentes = parsed.recurrentes;
             if (parsed.metasPorMes && typeof parsed.metasPorMes === 'object') estado.metasPorMes = parsed.metasPorMes;
             if (parsed.metasCompartidas && typeof parsed.metasCompartidas === 'object') estado.metasCompartidas = parsed.metasCompartidas;
+            if (Array.isArray(parsed.planesAmortizacion)) estado.planesAmortizacion = parsed.planesAmortizacion;
+            if (parsed.repartoPredeterminado && typeof parsed.repartoPredeterminado === 'object') estado.repartoPredeterminado = parsed.repartoPredeterminado;
             if (parsed.usuarios && typeof parsed.usuarios === 'object') estado.usuarios = parsed.usuarios;
             if (parsed._borrados && typeof parsed._borrados === 'object') estado._borrados = parsed._borrados;
             return true;
@@ -157,6 +165,9 @@ function esModoPortable() {
 }
 
 function debeIntentarBackend() {
+    // FORZAMOS la conexión si existe configuración de nube, ignorando las detecciones automáticas
+    if (typeof window !== 'undefined' && window.NUBE_CONFIG) return true;
+    
     if (esModoPortable()) return false;
     if (backendDisponible === false) return false;
     try {
@@ -268,11 +279,11 @@ async function cargarDatosServidor() {
     // 1. LOCAL PRIMERO: render inmediato, sin esperar red. Independiente del servidor.
     const tieneLocal = cargarLocalmente();
     if (!tieneLocal) {
-        // Inicializar con la base de datos rica por defecto
-        estado.transacciones = JSON.parse(JSON.stringify(DATOS_INICIALES.transacciones));
-        estado.recurrentes = JSON.parse(JSON.stringify(DATOS_INICIALES.recurrentes));
-        estado.metasPorMes = JSON.parse(JSON.stringify(DATOS_INICIALES.metasPorMes));
-        estado.usuarios = JSON.parse(JSON.stringify(DATOS_INICIALES.usuarios));
+        // Inicializar con la base de datos de ejemplo si no hay local
+        estado.transacciones = JSON.parse(JSON.stringify(DATOS_DEMO.transacciones));
+        estado.recurrentes = JSON.parse(JSON.stringify(DATOS_DEMO.recurrentes));
+        estado.metasPorMes = JSON.parse(JSON.stringify(DATOS_DEMO.metasPorMes));
+        estado.usuarios = JSON.parse(JSON.stringify(DATOS_DEMO.usuarios));
         guardarLocalmente();
     }
 
@@ -372,6 +383,39 @@ function fechaHoyISO() {
     const h = new Date();
     return h.getFullYear() + '-' + String(h.getMonth() + 1).padStart(2, '0') + '-' + String(h.getDate()).padStart(2, '0');
 }
+// Convierte un input date (YYYY-MM-DD) a ISO usando mediodía local.
+// Evita que `new Date("2026-09-01").toISOString()` (medianoche UTC) se desplace
+// al día/mes anterior en husos negativos y oculte el movimiento del mes.
+function fechaInputALocalISO(fechaYYYYMMDD) {
+    try {
+        if (!fechaYYYYMMDD || typeof fechaYYYYMMDD !== 'string') return new Date().toISOString();
+        const limpio = fechaYYYYMMDD.substring(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(limpio)) return new Date().toISOString();
+        const d = new Date(limpio + 'T12:00:00');
+        if (!isNaN(d)) return d.toISOString();
+        return new Date().toISOString();
+    } catch (e) {
+        return new Date().toISOString();
+    }
+}
+// Convierte un ISO (UTC) a valor para <input type="date"> en fecha LOCAL (no UTC).
+function isoAFechaInput(iso) {
+    try {
+        const d = new Date(iso);
+        if (isNaN(d)) return fechaHoyISO();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    } catch (e) {
+        return fechaHoyISO();
+    }
+}
+function claveMesDeFechaInput(fechaYYYYMMDD) {
+    try {
+        const s = String(fechaYYYYMMDD || '').substring(0, 7);
+        return /^\d{4}-\d{2}$/.test(s) ? s : null;
+    } catch (e) {
+        return null;
+    }
+}
 function inicializarSelectorMeses() {
     const select = document.getElementById('globalMonthSelect');
     if (!select) return;
@@ -384,10 +428,15 @@ function inicializarSelectorMeses() {
     }
 
     estado.transacciones.forEach(t => {
-        if (t.fecha) {
-            mesesSet.add(t.fecha.substring(0, 7));
+        if (t && typeof t.fecha === 'string' && t.fecha.length >= 7) {
+            const clave = t.fecha.substring(0, 7);
+            if (/^\d{4}-\d{2}$/.test(clave)) mesesSet.add(clave);
         }
     });
+    // El mes seleccionado siempre debe existir en el desplegable (p. ej. mes futuro recién creado)
+    if (estado.mesSeleccionado && /^\d{4}-\d{2}$/.test(estado.mesSeleccionado)) {
+        mesesSet.add(estado.mesSeleccionado);
+    }
 
     const mesesOrdenados = Array.from(mesesSet).sort().reverse();
     select.innerHTML = '';
@@ -428,12 +477,22 @@ function navegarMes(delta) {
 
 function obtenerOperacionesMes(anio, mesNum1Indexed) {
     const ops = [];
+    const clave = anio + '-' + String(mesNum1Indexed).padStart(2, '0');
 
     estado.transacciones.forEach(t => {
-        const d = new Date(t.fecha);
-        if (d.getFullYear() === anio && (d.getMonth() + 1) === mesNum1Indexed) {
-            ops.push(t);
+        if (!t || !t.fecha) return;
+        // Fuente de verdad: clave YYYY-MM del ISO (consistente con inicializarSelectorMeses).
+        // Evita desfases de huso horario de getFullYear/getMonth en días límite de mes.
+        if (typeof t.fecha === 'string' && /^\d{4}-\d{2}/.test(t.fecha)) {
+            if (t.fecha.substring(0, 7) === clave) ops.push(t);
+            return;
         }
+        try {
+            const d = new Date(t.fecha);
+            if (!isNaN(d) && d.getFullYear() === anio && (d.getMonth() + 1) === mesNum1Indexed) {
+                ops.push(t);
+            }
+        } catch (e) {}
     });
 
     estado.recurrentes.forEach(r => {
@@ -548,15 +607,207 @@ function renderHeroAndKpis() {
 }
 
 // ==========================================================================
-// Renderizador: Meta de Ahorro y Plan de Prorrateo
+// Renderizador: Meta de Ahorro, Reparto Reactivo y Planes de Amortización
 // ==========================================================================
 
+function obtenerRepartoMes(mes) {
+    if (estado.metasCompartidas && estado.metasCompartidas[mes] && Object.keys(estado.metasCompartidas[mes]).length > 0) {
+        return Object.assign({}, estado.metasCompartidas[mes]);
+    }
+    if (estado.repartoPredeterminado && Object.keys(estado.repartoPredeterminado).length > 0) {
+        return Object.assign({}, estado.repartoPredeterminado);
+    }
+    const members = Object.keys(estado.usuarios);
+    if (members.length === 0) return {};
+    if (members.length === 2) {
+        return { [members[0]]: 50, [members[1]]: 50 };
+    }
+    const pct = Math.floor(100 / members.length);
+    const reparto = {};
+    members.forEach((m, idx) => {
+        reparto[m] = (idx === members.length - 1) ? (100 - pct * (members.length - 1)) : pct;
+    });
+    return reparto;
+}
+
+function obtenerPlanAmortizacionActivo(mes) {
+    if (!estado.planesAmortizacion || !Array.isArray(estado.planesAmortizacion)) return null;
+    return estado.planesAmortizacion.find(p => 
+        p.mesesLista && p.mesesLista.includes(mes) && 
+        (p.estado === 'activo' || p.estado === 'prorrogado') &&
+        p.saldoPendiente > 0.01
+    ) || null;
+}
+
+function activarProrrogaPlan(plan) {
+    if (!plan || plan.mesesPlazo >= 12) return;
+    const mesesActuales = plan.mesesLista.length;
+    const mesesParaDoce = 12 - mesesActuales;
+    if (mesesParaDoce <= 0) return;
+
+    const ultimoMes = plan.mesesLista[plan.mesesLista.length - 1];
+    const [uAnio, uMes] = ultimoMes.split('-').map(Number);
+    let curAnio = uAnio;
+    let curMes = uMes;
+
+    for (let i = 1; i <= mesesParaDoce; i++) {
+        curMes++;
+        if (curMes > 12) { curMes = 1; curAnio++; }
+        const clave = `${curAnio}-${String(curMes).padStart(2, '0')}`;
+        if (!plan.mesesLista.includes(clave)) {
+            plan.mesesLista.push(clave);
+        }
+    }
+
+    plan.mesesPlazo = 12;
+    plan.prorrogaActiva = true;
+    plan.estado = 'prorrogado';
+    
+    // Recalcular cuota mensual reducida para absorber el saldo pendiente en el plazo ampliado
+    const mesesTotales = plan.mesesLista.length;
+    const cuotaNueva = parseFloat((plan.saldoPendiente / mesesTotales).toFixed(2));
+    if (cuotaNueva > 0) plan.cuotaMensual = cuotaNueva;
+
+    // Actualizar bases en los meses restantes
+    plan.mesesLista.forEach(m => {
+        if (!estado.metasPorMes[m] || estado.metasPorMes[m] <= plan.cuotaMensual) {
+            estado.metasPorMes[m] = plan.cuotaMensual;
+        }
+    });
+
+    guardarLocalmente();
+}
+
+function verificarProrrogaAutomatica(plan, mesActual) {
+    if (!plan || plan.mesesPlazo >= 12 || plan.saldoPendiente <= 0.01) return;
+    const ultimoMes = plan.mesesLista[plan.mesesLista.length - 1];
+    if (mesActual >= ultimoMes) {
+        activarProrrogaPlan(plan);
+    }
+}
+
+function solicitarProrroga12Meses() {
+    const plan = obtenerPlanAmortizacionActivo(estado.mesSeleccionado);
+    if (!plan) return;
+    if (plan.mesesPlazo >= 12) {
+        mostrarToast('El plan ya cuenta con el plazo máximo de 12 meses', 'info');
+        return;
+    }
+    if (!confirm(`¿Deseas prorrogar este plan de amortización hasta los 12 meses? El saldo pendiente de ${plan.saldoPendiente.toFixed(2)} € se redistribuirá reduciendo la cuota mensual.`)) {
+        return;
+    }
+    activarProrrogaPlan(plan);
+    mostrarToast('⏱️ ¡Prórroga activada! El plan se ha ampliado hasta 12 meses con cuota reducida.', 'success');
+    renderMetaAhorro();
+}
+
+function saldarDeudaAnticipada() {
+    const plan = obtenerPlanAmortizacionActivo(estado.mesSeleccionado);
+    if (!plan) {
+        mostrarToast('No hay un plan de amortización activo para este mes', 'info');
+        return;
+    }
+
+    if (!confirm(`¿Confirmas que deseas saldar anticipadamente la deuda pendiente de ${plan.saldoPendiente.toFixed(2)} €? El recordatorio y las cuotas de amortización restantes desaparecerán de inmediato.`)) {
+        return;
+    }
+
+    plan.saldoPendiente = 0;
+    plan.estado = 'liquidado_anticipado';
+    plan.fechaLiquidacion = new Date().toISOString();
+
+    // Eliminar las cuotas de amortización base de los meses futuros que pertenecían a este plan
+    const idxActual = plan.mesesLista.indexOf(estado.mesSeleccionado);
+    const mesesFuturos = idxActual >= 0 ? plan.mesesLista.slice(idxActual) : plan.mesesLista;
+    mesesFuturos.forEach(m => {
+        if (estado.metasPorMes[m] === plan.cuotaMensual) {
+            delete estado.metasPorMes[m];
+        } else if (estado.metasPorMes[m] > plan.cuotaMensual) {
+            estado.metasPorMes[m] = Math.round((estado.metasPorMes[m] - plan.cuotaMensual) * 100) / 100;
+        }
+    });
+
+    guardarLocalmente();
+    mostrarToast('🎉 ¡Deuda saldada anticipadamente! Se ha cancelado el plan de amortización y su recordatorio.', 'success');
+    renderMetaAhorro();
+}
+
 function renderMetaAhorro() {
+    // 1. Plan de amortización activo para este mes
+    const planActivo = obtenerPlanAmortizacionActivo(estado.mesSeleccionado);
+    const bannerAmortizacion = document.getElementById('bannerAmortizacionActiva');
+    const boxBaseAmortizacion = document.getElementById('boxBaseAmortizacion');
+
+    if (planActivo) {
+        // Verificar si procede prórroga automática al estar al final o más allá del plazo inicial sin haber saldado
+        verificarProrrogaAutomatica(planActivo, estado.mesSeleccionado);
+
+        if (bannerAmortizacion) {
+            bannerAmortizacion.style.display = 'block';
+            const mesIdx = planActivo.mesesLista.indexOf(estado.mesSeleccionado) + 1;
+            document.getElementById('lblAmortizacionTitulo').textContent = planActivo.prorrogaActiva ? 'Plan de Amortización (Prórroga)' : 'Plan de Amortización Activo';
+            document.getElementById('badgeAmortizacionProgreso').textContent = `Mes ${mesIdx > 0 ? mesIdx : 1} de ${planActivo.mesesPlazo}`;
+            
+            const badgeProrroga = document.getElementById('badgeAmortizacionProrroga');
+            if (badgeProrroga) {
+                badgeProrroga.style.display = planActivo.prorrogaActiva ? 'inline-block' : 'none';
+            }
+
+            document.getElementById('lblAmortSaldoPendiente').textContent = `${planActivo.saldoPendiente.toFixed(2)} €`;
+            document.getElementById('lblAmortCuotaMes').textContent = `+${planActivo.cuotaMensual.toFixed(2)} €/mes`;
+
+            // Desglose mensual por miembro
+            const rep = planActivo.reparto || obtenerRepartoMes(estado.mesSeleccionado);
+            const miembrosDesglose = Object.entries(estado.usuarios).map(([tel, nom]) => {
+                const pct = rep[tel] !== undefined ? rep[tel] : 50;
+                const cuotaM = (planActivo.cuotaMensual * (pct / 100)).toFixed(2);
+                return `<strong>${nom}</strong>: +${cuotaM} €/mes (${pct}%)`;
+            }).join(' · ');
+            
+            let btnProrrogaHtml = '';
+            if (planActivo.mesesPlazo < 12 && !planActivo.prorrogaActiva) {
+                btnProrrogaHtml = ` · <button class="btn btn-outline" style="padding:2px 8px;font-size:0.75rem;cursor:pointer;" onclick="solicitarProrroga12Meses()">⏱️ Prorrogar hasta 12 meses</button>`;
+            }
+
+            document.getElementById('lblAmortDesgloseMiembros').innerHTML = 
+                `💡 <strong>Aportación mensual requerida:</strong> ${miembrosDesglose}${btnProrrogaHtml}`;
+        }
+
+        // Regla: el mes siguiente tiene de base la amortización del mes anterior (no la base anterior + añadido)
+        if (boxBaseAmortizacion) {
+            boxBaseAmortizacion.style.display = 'flex';
+            document.getElementById('lblBaseAmortTexto').innerHTML = 
+                `Base obligatoria de este mes (amortización): <strong>${planActivo.cuotaMensual.toFixed(2)} €</strong>`;
+            
+            // Si el mes aún no tenía meta fijada, se establece la cuota de amortización como base predeterminada
+            if (estado.metasPorMes[estado.mesSeleccionado] === undefined) {
+                estado.metasPorMes[estado.mesSeleccionado] = planActivo.cuotaMensual;
+                guardarLocalmente();
+            }
+
+            const metaActual = estado.metasPorMes[estado.mesSeleccionado] || planActivo.cuotaMensual;
+            const extra = Math.max(0, Math.round((metaActual - planActivo.cuotaMensual) * 100) / 100);
+            const inputExtra = document.getElementById('inputAporteExtraMeta');
+            if (inputExtra && document.activeElement !== inputExtra) {
+                inputExtra.value = extra > 0 ? extra : '';
+            }
+            document.getElementById('lblMetaTotalCalculada').textContent = `Meta Total Resultante: ${metaActual.toFixed(2)} €`;
+        }
+    } else {
+        if (bannerAmortizacion) bannerAmortizacion.style.display = 'none';
+        if (boxBaseAmortizacion) boxBaseAmortizacion.style.display = 'none';
+    }
+
+    // 2. Comprobación de meta fijada
     const metaGuardada = estado.metasPorMes[estado.mesSeleccionado];
     const tieneMeta = metaGuardada !== undefined && metaGuardada > 0;
     const meta = tieneMeta ? metaGuardada : 0;
-    document.getElementById('inputMetaAhorro').value = tieneMeta ? meta : '';
+    const inputMeta = document.getElementById('inputMetaAhorro');
+    if (inputMeta && document.activeElement !== inputMeta) {
+        inputMeta.value = tieneMeta ? meta : '';
+    }
 
+    // 3. Balance del mes
     const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
     const ops = obtenerOperacionesMes(anio, mesNum);
     let totalIng = 0;
@@ -580,6 +831,7 @@ function renderMetaAhorro() {
         lblPorcentaje.textContent = 'Sin meta fijada';
         bannerCelebracion.style.display = 'none';
         bannerDeficit.style.display = 'none';
+        renderMetaCompartidaUI();
         return;
     }
 
@@ -587,45 +839,151 @@ function renderMetaAhorro() {
     progressEl.style.width = `${Math.min(100, Math.max(0, porcentaje))}%`;
     progressEl.classList.toggle('overachieved', balanceActual >= meta);
 
-    lblAhorrado.textContent = `Ahorro conseguido: ${balanceActual.toLocaleString('es-ES', { minimumFractionDigits: 2 })} € / ${meta} €`;
+    lblAhorrado.textContent = `Ahorro conseguido: ${balanceActual.toLocaleString('es-ES', { minimumFractionDigits: 2 })} € / ${meta.toFixed(2)} €`;
     lblPorcentaje.textContent = `${porcentaje}% del objetivo`;
 
     if (balanceActual >= meta) {
         bannerCelebracion.style.display = 'block';
         bannerDeficit.style.display = 'none';
+
+        // Si hay plan activo y el superávit salda el saldo pendiente, autoliquidar
+        if (planActivo && balanceActual - meta >= planActivo.saldoPendiente) {
+            planActivo.saldoPendiente = 0;
+            planActivo.estado = 'liquidado_anticipado';
+            guardarLocalmente();
+            if (bannerAmortizacion) bannerAmortizacion.style.display = 'none';
+            if (boxBaseAmortizacion) boxBaseAmortizacion.style.display = 'none';
+        }
     } else {
         bannerCelebracion.style.display = 'none';
         bannerDeficit.style.display = 'block';
         const deficit = meta - balanceActual;
         document.getElementById('lblDeficitImporte').textContent = `${deficit.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €`;
+        actualizarDesgloseDeficitUI();
         actualizarCalculoProrrateo();
     }
-    try { renderMetaCompartidaUI(); } catch(e){}
+
+    renderMetaCompartidaUI();
+}
+
+function actualizarDesgloseDeficitUI() {
+    const elDeficitDesglose = document.getElementById('lblDeficitDesglose');
+    if (!elDeficitDesglose) return;
+
+    const meta = parseFloat(document.getElementById('inputMetaAhorro').value) || 0;
+    const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
+    const ops = obtenerOperacionesMes(anio, mesNum);
+    let totalIng = 0, totalGas = 0;
+    ops.forEach(t => t.tipo === 'ingreso' ? totalIng += t.cantidad : totalGas += t.cantidad);
+    const deficit = meta - (totalIng - totalGas);
+
+    if (deficit <= 0) {
+        elDeficitDesglose.innerHTML = '';
+        return;
+    }
+
+    const reparto = obtenerRepartoMes(estado.mesSeleccionado);
+    const members = Object.entries(estado.usuarios);
+    if (!members.length) return;
+
+    let html = '<strong>Desglose del déficit por miembro:</strong><ul class="deficit-desglose-list">';
+    members.forEach(([tel, nom]) => {
+        const pct = reparto[tel] !== undefined ? reparto[tel] : (members.length === 2 ? 50 : Math.floor(100 / members.length));
+        const parte = (deficit * (pct / 100)).toFixed(2);
+        html += `
+            <li class="deficit-desglose-item">
+                <span>👤 <strong>${nom}</strong> (${pct}%):</span>
+                <strong style="color:var(--danger);">${parte} €</strong>
+            </li>
+        `;
+    });
+    html += '</ul>';
+    elDeficitDesglose.innerHTML = html;
 }
 
 function actualizarCalculoProrrateo() {
     const meta = parseFloat(document.getElementById('inputMetaAhorro').value);
+    const lblDetalle = document.getElementById('lblProrrateoDetalle');
+    if (!lblDetalle) return;
+
     if (isNaN(meta) || meta <= 0) {
-        document.getElementById('lblProrrateoDetalle').innerHTML = 'Fija primero una meta válida para calcular el plan de recuperación.';
+        lblDetalle.innerHTML = 'Fija primero una meta válida para calcular el plan de recuperación.';
         return;
     }
     const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
     const ops = obtenerOperacionesMes(anio, mesNum);
-    let totalIng = 0;
-    let totalGas = 0;
-    ops.forEach(t => {
-        if (t.tipo === 'ingreso') totalIng += t.cantidad;
-        else totalGas += t.cantidad;
-    });
-    const balance = totalIng - totalGas;
-    const deficit = meta - balance;
+    let totalIng = 0, totalGas = 0;
+    ops.forEach(t => t.tipo === 'ingreso' ? totalIng += t.cantidad : totalGas += t.cantidad);
+    const deficit = meta - (totalIng - totalGas);
+
+    if (deficit <= 0) {
+        lblDetalle.innerHTML = '';
+        return;
+    }
 
     const meses = parseInt(document.getElementById('selectMesesProrrateo').value) || 6;
     const cuotaExtra = deficit / meses;
-    const nuevaMetaSugerida = meta + cuotaExtra;
+    const reparto = obtenerRepartoMes(estado.mesSeleccionado);
+    const members = Object.entries(estado.usuarios);
 
-    document.getElementById('lblProrrateoDetalle').innerHTML = 
-        `💡 Para absorber el desfase en <strong>${meses} meses</strong>, sugerimos sumar <strong>+${cuotaExtra.toFixed(2)} €/mes</strong> a vuestras metas futuras (total: <strong>${nuevaMetaSugerida.toFixed(2)} €</strong>).`;
+    let desgloseCuota = '';
+    if (members.length > 0) {
+        desgloseCuota = ' (' + members.map(([tel, nom]) => {
+            const pct = reparto[tel] !== undefined ? reparto[tel] : 50;
+            const aporte = (cuotaExtra * (pct / 100)).toFixed(2);
+            return `${nom}: <strong>+${aporte} €/mes</strong>`;
+        }).join(', ') + ')';
+    }
+
+    lblDetalle.innerHTML = 
+        `💡 Para absorber el desfase en <strong>${meses} meses</strong>, cada mes tendrá una cuota base de amortización de <strong>+${cuotaExtra.toFixed(2)} €/mes</strong>${desgloseCuota}. Si en ese plazo no se salda, se podrá prorrogar hasta 12 meses.`;
+}
+
+function alCambiarInputMetaAhorro() {
+    const metaTotal = parseFloat(document.getElementById('inputMetaAhorro').value) || 0;
+    
+    // Si hay amortización activa, sincronizar el campo de aporte extra voluntario
+    const plan = obtenerPlanAmortizacionActivo(estado.mesSeleccionado);
+    if (plan) {
+        const base = plan.cuotaMensual;
+        const extra = Math.max(0, Math.round((metaTotal - base) * 100) / 100);
+        const inputExtra = document.getElementById('inputAporteExtraMeta');
+        if (inputExtra && document.activeElement !== inputExtra) {
+            inputExtra.value = extra > 0 ? extra : '';
+        }
+        const lblTotal = document.getElementById('lblMetaTotalCalculada');
+        if (lblTotal) lblTotal.textContent = `Meta Total Resultante: ${metaTotal.toFixed(2)} €`;
+    }
+
+    // Actualizar importes en euros en la lista de reparto sin tocar inputs ni perder foco
+    const inputs = document.querySelectorAll('.pct-input');
+    inputs.forEach(inp => {
+        const tel = inp.getAttribute('data-tel');
+        const p = parseInt(inp.value) || 0;
+        const lbl = document.getElementById(`lblImporteMeta_${tel}`);
+        if (lbl) {
+            lbl.textContent = `${(metaTotal * (p / 100)).toFixed(2)} €`;
+        }
+    });
+
+    actualizarDesgloseDeficitUI();
+    actualizarCalculoProrrateo();
+}
+
+function actualizarMetaConAporteExtra() {
+    const plan = obtenerPlanAmortizacionActivo(estado.mesSeleccionado);
+    const base = plan ? plan.cuotaMensual : 0;
+    const inputExtra = document.getElementById('inputAporteExtraMeta');
+    const extra = parseFloat(inputExtra.value) || 0;
+    const metaTotal = Math.round((base + extra) * 100) / 100;
+
+    const inputMeta = document.getElementById('inputMetaAhorro');
+    if (inputMeta) inputMeta.value = metaTotal > 0 ? metaTotal : '';
+
+    const lblTotal = document.getElementById('lblMetaTotalCalculada');
+    if (lblTotal) lblTotal.textContent = `Meta Total Resultante: ${metaTotal.toFixed(2)} €`;
+
+    alCambiarInputMetaAhorro();
 }
 
 async function aplicarPlanProrrateo() {
@@ -640,11 +998,16 @@ async function aplicarPlanProrrateo() {
     ops.forEach(t => t.tipo === 'ingreso' ? totalIng += t.cantidad : totalGas += t.cantidad);
     const deficit = meta - (totalIng - totalGas);
 
-    const meses = parseInt(document.getElementById('selectMesesProrrateo').value) || 6;
-    const cuotaExtra = deficit / meses;
-    const nuevaMeta = Math.round(meta + cuotaExtra);
+    if (deficit <= 0) {
+        mostrarToast('No hay déficit que amortizar este mes', 'info');
+        return;
+    }
 
-    const metasActualizadas = {};
+    // El cliente escoge libremente entre 2, 4, 6, 8 y 12 meses
+    const meses = parseInt(document.getElementById('selectMesesProrrateo').value) || 6;
+    const cuotaExtra = parseFloat((deficit / meses).toFixed(2));
+
+    const mesesLista = [];
     let cursorAnio = anio;
     let cursorMes = mesNum;
 
@@ -655,13 +1018,37 @@ async function aplicarPlanProrrateo() {
             cursorAnio++;
         }
         const clave = `${cursorAnio}-${String(cursorMes).padStart(2, '0')}`;
-        metasActualizadas[clave] = nuevaMeta;
-        estado.metasPorMes[clave] = nuevaMeta;
+        mesesLista.push(clave);
+        
+        // Regla: el mes siguiente tiene de base la amortización del mes anterior (no base anterior + añadidos)
+        if (!estado.metasPorMes[clave] || estado.metasPorMes[clave] <= cuotaExtra) {
+            estado.metasPorMes[clave] = cuotaExtra;
+        }
     }
 
+    const nuevoPlan = {
+        id: 'plan_' + Date.now(),
+        mesOrigen: estado.mesSeleccionado,
+        deficitTotal: Math.round(deficit * 100) / 100,
+        saldoPendiente: Math.round(deficit * 100) / 100,
+        mesesPlazoOriginal: meses,
+        mesesPlazo: meses,
+        cuotaMensual: cuotaExtra,
+        mesesLista: mesesLista,
+        reparto: Object.assign({}, obtenerRepartoMes(estado.mesSeleccionado)),
+        estado: 'activo',
+        prorrogaActiva: false,
+        fechaCreacion: new Date().toISOString()
+    };
+
+    if (!estado.planesAmortizacion) estado.planesAmortizacion = [];
+    estado.planesAmortizacion.push(nuevoPlan);
+
     guardarLocalmente();
-    api('/api/metas-lote', 'POST', { metas: metasActualizadas }).catch(() => {});
-    mostrarToast(`¡Plan aplicado! Nueva meta de ${nuevaMeta} € fijada para los próximos ${meses} meses.`, 'success');
+    api('/api/metas-lote', 'POST', { metas: estado.metasPorMes }).catch(() => {});
+    api('/api/planes-amortizacion', 'POST', { planes: estado.planesAmortizacion }).catch(() => {});
+    
+    mostrarToast(`¡Plan de recuperación activado a ${meses} meses! Cuota base de ${cuotaExtra.toFixed(2)} €/mes asignada para amortizar la deuda.`, 'success');
     renderMetaAhorro();
 }
 
@@ -680,34 +1067,159 @@ async function guardarMetaAhorro() {
 }
 
 // ==========================================================================
-// Banner Inteligente: Pico de Gasto
+// Configuración de Reparto Reactivo (Suma 100% Automática)
 // ==========================================================================
+
+function toggleMetaCompartida() {
+    const chk = document.getElementById('opMetaCompartida');
+    const sec = document.getElementById('metaCompartidaSection');
+    if (!chk || !sec) return;
+    
+    if (chk.checked) {
+        sec.style.display = 'block';
+        if (!estado.metasCompartidas) estado.metasCompartidas = {};
+        if (!estado.metasCompartidas[estado.mesSeleccionado]) {
+            estado.metasCompartidas[estado.mesSeleccionado] = obtenerRepartoMes(estado.mesSeleccionado);
+            guardarLocalmente();
+        }
+        renderMetaCompartidaUI();
+    } else {
+        sec.style.display = 'none';
+        if (estado.metasCompartidas) {
+            delete estado.metasCompartidas[estado.mesSeleccionado];
+            guardarLocalmente();
+        }
+        renderMetaAhorro();
+    }
+}
 
 function renderMetaCompartidaUI() {
     const elMetaCompartida = document.getElementById('opMetaCompartida');
+    const sec = document.getElementById('metaCompartidaSection');
+    const compartida = !!(estado.metasCompartidas && estado.metasCompartidas[estado.mesSeleccionado]);
+    
     if (elMetaCompartida) {
-        const compartida = !!estado.metasCompartidas && !!estado.metasCompartidas[estado.mesSeleccionado];
         elMetaCompartida.checked = compartida;
     }
+    if (sec) {
+        sec.style.display = compartida ? 'block' : 'none';
+    }
+
     const listDiv = document.getElementById('metaCompartidaList');
-    if (!listDiv || !Object.keys(estado.usuarios).length) return;
+    if (!listDiv) return;
+
     const members = Object.entries(estado.usuarios);
-    const split = (!!estado.metasCompartidas && !!estado.metasCompartidas[estado.mesSeleccionado]) ? estado.metasCompartidas[estado.mesSeleccionado] : {};
-    const defaultPct = members.length <= 1 ? 100 : Math.round(100 / members.length);
+    if (!members.length) {
+        listDiv.innerHTML = '<p style="font-size:0.8rem;color:var(--text-muted);">No hay miembros registrados.</p>';
+        return;
+    }
+
+    const split = obtenerRepartoMes(estado.mesSeleccionado);
+    const metaTotal = parseFloat(document.getElementById('inputMetaAhorro').value) || 0;
+
+    let totalPct = 0;
     listDiv.innerHTML = members.map(([tel, nom]) => {
-        const pct = split[tel] !== undefined ? split[tel] : defaultPct;
-        return `<label style="display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:.82rem;"><input type="checkbox" checked data-tel="${tel}" class="pct-check" onchange="ajustarSeleccion(${tel})"><span style="min-width:120px;font-weight:600;">${nom} (${tel})</span><input type="number" min="0" max="100" step="5" value="${pct}" style="width:60px;padding:3px 6px;font-size:.8rem;" data-tel="${tel}" class="pct-input" oninput="ajustarPorcentajes(this)"></label>`;
+        const pct = split[tel] !== undefined ? split[tel] : (members.length === 2 ? 50 : Math.floor(100 / members.length));
+        totalPct += pct;
+        const importe = (metaTotal * (pct / 100)).toFixed(2);
+        return `
+            <div class="meta-member-row">
+                <span class="meta-member-name" title="${nom}">👤 ${nom}</span>
+                <div class="pct-input-wrap">
+                    <input type="number" min="0" max="100" step="1" value="${pct}"
+                        data-tel="${tel}" class="pct-input" oninput="ajustarPorcentajesReactivo(this)">
+                    <span class="pct-symbol">%</span>
+                </div>
+                <span id="lblImporteMeta_${tel}" class="meta-member-amount">${importe} €</span>
+            </div>
+        `;
     }).join('');
-    document.getElementById('metaCompartidaSection').style.display = (document.getElementById('opMetaCompartida') && document.getElementById('opMetaCompartida').checked) ? 'block' : 'none';
+
+    const badge = document.getElementById('badgeTotalPorcentaje');
+    if (badge) {
+        if (totalPct === 100) {
+            badge.textContent = 'Suma: 100% ✓';
+            badge.className = 'badge-pct-status';
+        } else {
+            badge.textContent = `Suma: ${totalPct}% ⚠️`;
+            badge.className = 'badge-pct-status invalid';
+        }
+    }
 }
 
-function toggleMetaCompartida() {
-    const checked = document.getElementById('opMetaCompartida') && document.getElementById('opMetaCompartida').checked;
-    document.getElementById('metaCompartidaSection').style.display = checked ? 'block' : 'none';
-    if (checked) renderMetaCompartidaUI();
-}
+function ajustarPorcentajesReactivo(changedInput) {
+    const changedTel = changedInput.getAttribute('data-tel');
+    let rawVal = parseInt(changedInput.value);
+    if (isNaN(rawVal)) rawVal = 0;
+    const val = Math.max(0, Math.min(100, rawVal));
 
-function ajustarPorcentajes(input) {}
+    // Si excede 100 o es menor que 0, corregir en el input
+    if (changedInput.value !== '' && (parseInt(changedInput.value) < 0 || parseInt(changedInput.value) > 100)) {
+        changedInput.value = val;
+    }
+
+    const allInputs = Array.from(document.querySelectorAll('.pct-input'));
+    const otherInputs = allInputs.filter(inp => inp !== changedInput);
+
+    if (otherInputs.length === 1) {
+        // En parejas: el otro miembro es exactamente 100 - val
+        const otherVal = Math.max(0, 100 - val);
+        otherInputs[0].value = otherVal;
+    } else if (otherInputs.length > 1) {
+        // Si hay más de 2 miembros: repartir proporcionalmente el resto
+        const remainingPct = Math.max(0, 100 - val);
+        let currentOtherTotal = 0;
+        otherInputs.forEach(inp => { currentOtherTotal += (parseInt(inp.value) || 0); });
+        
+        let assigned = 0;
+        otherInputs.forEach((inp, idx) => {
+            if (idx === otherInputs.length - 1) {
+                inp.value = Math.max(0, remainingPct - assigned);
+            } else {
+                const ratio = currentOtherTotal > 0 ? (parseInt(inp.value) || 0) / currentOtherTotal : (1 / otherInputs.length);
+                const share = Math.round(remainingPct * ratio);
+                inp.value = share;
+                assigned += share;
+            }
+        });
+    }
+
+    // Verificar la suma de porcentajes
+    let sum = 0;
+    allInputs.forEach(inp => sum += (parseInt(inp.value) || 0));
+    const badge = document.getElementById('badgeTotalPorcentaje');
+    if (badge) {
+        if (sum === 100) {
+            badge.textContent = 'Suma: 100% ✓';
+            badge.className = 'badge-pct-status';
+        } else {
+            badge.textContent = `Suma: ${sum}% ⚠️`;
+            badge.className = 'badge-pct-status invalid';
+        }
+    }
+
+    // Actualizar los importes en euros en tiempo real sin recargar el DOM (manteniendo el foco intacto)
+    const metaTotal = parseFloat(document.getElementById('inputMetaAhorro').value) || 0;
+    const nuevoReparto = {};
+    allInputs.forEach(inp => {
+        const tel = inp.getAttribute('data-tel');
+        const p = parseInt(inp.value) || 0;
+        nuevoReparto[tel] = p;
+        const lbl = document.getElementById(`lblImporteMeta_${tel}`);
+        if (lbl) {
+            lbl.textContent = `${(metaTotal * (p / 100)).toFixed(2)} €`;
+        }
+    });
+
+    if (!estado.metasCompartidas) estado.metasCompartidas = {};
+    estado.metasCompartidas[estado.mesSeleccionado] = nuevoReparto;
+    estado.repartoPredeterminado = Object.assign({}, nuevoReparto);
+    guardarLocalmente();
+
+    // Actualizar reactivamente el desglose de déficit si procede
+    actualizarDesgloseDeficitUI();
+    actualizarCalculoProrrateo();
+}
 
 function guardarMetaCompartida() {
     const inputs = document.querySelectorAll('.pct-input');
@@ -715,8 +1227,10 @@ function guardarMetaCompartida() {
     inputs.forEach(inp => { reparto[inp.getAttribute('data-tel')] = parseInt(inp.value) || 0; });
     if (!estado.metasCompartidas) estado.metasCompartidas = {};
     estado.metasCompartidas[estado.mesSeleccionado] = reparto;
+    estado.repartoPredeterminado = Object.assign({}, reparto);
     guardarLocalmente();
-    mostrarToast('Reparto de meta actualizado', 'success');
+    api('/api/metas-compartidas', 'POST', { metasCompartidas: estado.metasCompartidas, repartoPredeterminado: estado.repartoPredeterminado }).catch(() => {});
+    mostrarToast('Reparto de meta guardado con éxito', 'success');
     renderMetaAhorro();
 }
 
@@ -913,27 +1427,81 @@ function renderCharts() {
 // ==========================================================================
 
 function filtrarTransacciones() {
-    estado.filtros.busqueda = document.getElementById('inputSearchTx').value.toLowerCase().trim();
-    estado.filtros.tipo = document.getElementById('filterTipo').value;
-    estado.filtros.categoria = document.getElementById('filterCategoria').value;
-    estado.filtros.usuario = document.getElementById('filterUsuario').value;
+    try {
+        const elBus = document.getElementById('inputSearchTx');
+        const elTipo = document.getElementById('filterTipo');
+        const elPago = document.getElementById('filterFormaPago');
+        const elCat = document.getElementById('filterCategoria');
+        const elUsr = document.getElementById('filterUsuario');
+        if (elBus) estado.filtros.busqueda = String(elBus.value || '').toLowerCase().trim();
+        if (elTipo && elTipo.value) estado.filtros.tipo = elTipo.value;
+        if (elPago && elPago.value) estado.filtros.formaPago = elPago.value;
+        if (elCat && elCat.value) estado.filtros.categoria = elCat.value;
+        if (elUsr && elUsr.value) estado.filtros.usuario = elUsr.value;
+    } catch (e) {}
+    renderTransacciones();
+}
+
+// Restablece todos los filtros para garantizar que los movimientos sean visibles.
+// Antes, un filtro desincronizado (p. ej. usuario/categoría que ya no existe,
+// o búsqueda con texto) dejaba "Mostrando 0 de N" sin forma obvia de salir.
+function limpiarFiltros() {
+    estado.filtros = { busqueda: '', tipo: 'todos', categoria: 'todas', usuario: 'todos', formaPago: 'todos' };
+    try {
+        const elBus = document.getElementById('inputSearchTx'); if (elBus) elBus.value = '';
+        const elTipo = document.getElementById('filterTipo'); if (elTipo) elTipo.value = 'todos';
+        const elPago = document.getElementById('filterFormaPago'); if (elPago) elPago.value = 'todos';
+        const elCat = document.getElementById('filterCategoria'); if (elCat) elCat.value = 'todas';
+        const elUsr = document.getElementById('filterUsuario'); if (elUsr) elUsr.value = 'todos';
+    } catch (e) {}
     renderTransacciones();
 }
 
 function renderTransacciones() {
     const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
     const todasOps = obtenerOperacionesMes(anio, mesNum);
+
+    // Autocorrección: si un filtro apunta a un valor que ya no existe en el DOM
+    // (p. ej. miembro borrado, categoría renombrada), se restablece a "todos".
+    // Esto evita el caso "Mostrando 0 de N" con los desplegables aparentemente en "Todos".
+    try {
+        const elCat = document.getElementById('filterCategoria');
+        const elUsr = document.getElementById('filterUsuario');
+        const elTipo = document.getElementById('filterTipo');
+        const elPago = document.getElementById('filterFormaPago');
+        if (elCat && estado.filtros.categoria !== 'todas') {
+            const valida = Array.from(elCat.options || []).some(o => o.value === estado.filtros.categoria);
+            if (!valida) { estado.filtros.categoria = 'todas'; elCat.value = 'todas'; }
+        }
+        if (elUsr && estado.filtros.usuario !== 'todos') {
+            const valida = Array.from(elUsr.options || []).some(o => o.value === estado.filtros.usuario);
+            if (!valida) { estado.filtros.usuario = 'todos'; elUsr.value = 'todos'; }
+        }
+        if (elTipo && !['todos', 'gasto', 'ingreso', 'compartido'].includes(estado.filtros.tipo)) {
+            estado.filtros.tipo = 'todos'; elTipo.value = 'todos';
+        }
+        if (elPago && !['todos', 'efectivo', 'tarjeta'].includes(estado.filtros.formaPago)) {
+            estado.filtros.formaPago = 'todos'; elPago.value = 'todos';
+        }
+    } catch (e) {}
+    
     const container = document.getElementById('txListContainer');
     const counterEl = document.getElementById('lblTxCounter');
 
     const filtradas = todasOps.filter(t => {
-        if (estado.filtros.busqueda && !t.concepto.toLowerCase().includes(estado.filtros.busqueda)) return false;
+        const conceptoTxt = String((t && t.concepto) || '').toLowerCase();
+        if (estado.filtros.busqueda && !conceptoTxt.includes(estado.filtros.busqueda)) return false;
         if (estado.filtros.tipo === 'gasto' && t.tipo !== 'gasto') return false;
         if (estado.filtros.tipo === 'ingreso' && t.tipo !== 'ingreso') return false;
         if (estado.filtros.tipo === 'compartido' && !t.esCompartido) return false;
         if (estado.filtros.categoria !== 'todas' && t.categoria !== estado.filtros.categoria) return false;
-        if (estado.filtros.usuario !== 'todos' && t.telefono !== estado.filtros.usuario) return false;
-        if (estado.filtros.formaPago !== 'todos' && t.formaPago !== estado.filtros.formaPago) return false;
+        if (estado.filtros.usuario !== 'todos' && String(t.telefono) !== String(estado.filtros.usuario)) return false;
+        
+        // Filtro formaPago robusto
+        if (estado.filtros.formaPago !== 'todos') {
+            const formaPagoTx = t.formaPago || ''; 
+            if (formaPagoTx !== estado.filtros.formaPago) return false;
+        }
         return true;
     });
 
@@ -954,12 +1522,16 @@ function renderTransacciones() {
 
     filtradas.forEach(t => {
         const catConfig = CATEGORIAS_CONFIG[t.categoria] || { icon: "📁", color: "#94a3b8" };
-        const nombreUsuario = estado.usuarios[t.telefono] || t.telefono;
-        const fechaFormat = new Date(t.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+        const nombreUsuario = (estado.usuarios && estado.usuarios[t.telefono]) || t.telefono || '—';
+        let fechaFormat = '—';
+        try { fechaFormat = new Date(t.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }); } catch (e) {}
         const esIngreso = t.tipo === 'ingreso';
+        const cantidadNum = Number(t.cantidad);
+        const cantidadTxt = isNaN(cantidadNum) ? '0.00' : cantidadNum.toFixed(2);
 
         const row = document.createElement('div');
         row.className = 'transaction-item';
+        try { row.dataset.id = String(t.id); } catch (e) {}
 
         row.innerHTML = `
             <div class="tx-left">
@@ -967,11 +1539,11 @@ function renderTransacciones() {
                     ${catConfig.icon}
                 </div>
                 <div class="tx-meta">
-                    <div class="tx-title">${t.concepto}</div>
+                    <div class="tx-title">${String((t && t.concepto) || '(sin concepto)')}</div>
                     <div class="tx-badges-row">
                         <span class="pill-tag pill-user">📅 ${fechaFormat}</span>
                         <span class="pill-tag pill-user">👤 ${nombreUsuario}</span>
-                        <span class="pill-tag" style="background: ${catConfig.color}15; color: ${catConfig.color};">${t.categoria}</span>
+                        <span class="pill-tag" style="background: ${catConfig.color}15; color: ${catConfig.color};">${String(t.categoria || 'General')}</span>
                         ${t.esCompartido ? '<span class="pill-tag pill-shared">👥 Compartido</span>' : ''}
                         ${t.esFijo ? '<span class="pill-tag pill-recurring">📌 Fijo Periódico</span>' : ''}
                         <span class="pill-tag pill-pago" style="background: #f3f4f6; color: #6b7280; font-size: 0.75rem;">${t.formaPago === 'efectivo' ? '💵 Efectivo' : t.formaPago === 'tarjeta' ? '💳 Tarjeta' : ''}</span>
@@ -980,7 +1552,7 @@ function renderTransacciones() {
             </div>
             <div class="tx-right">
                 <div class="tx-amount ${esIngreso ? 'ingreso' : 'gasto'}">
-                    ${esIngreso ? '+' : '-'}${t.cantidad.toFixed(2)} €
+                    ${esIngreso ? '+' : '-'}${cantidadTxt} €
                 </div>
                 <div class="tx-actions">
                     ${!t.esFijo ? `
@@ -1342,9 +1914,18 @@ async function agregarNuevoUsuario(e) {
         return;
     }
 
+    // LIMPIEZA DE LÁPIDA: Si el usuario estaba marcado como borrado, quitar la marca y forzar sincronización
+    if (typeof NUBE_quitarBorrado === 'function') {
+        NUBE_quitarBorrado('usr', telefono);
+    }
+
     estado.usuarios[telefono] = nombre;
     guardarLocalmente();
-    api('/api/usuarios', 'POST', { telefono, nombre }).catch(() => {});
+    
+    // Si la nube está vinculada, forzamos una subida inmediata para evitar conflictos
+    if (typeof programarSubidaNube === 'function') {
+        programarSubidaNube(true); 
+    }
 
     telInput.value = '';
     nameInput.value = '';
@@ -1359,9 +1940,12 @@ async function eliminarUsuario(telefono) {
     const nombre = estado.usuarios[telefono] || telefono;
     if (confirm(`¿Seguro que deseas eliminar a "${nombre}" (${telefono}) del reparto familiar?`)) {
         delete estado.usuarios[telefono];
-        try { if (typeof NUBE_marcarBorrado === 'function') NUBE_marcarBorrado('usr', telefono); } catch (e) {}
+        
+        // Guardamos localmente y forzamos subida para que la nube actualice su lista
         guardarLocalmente();
-        api(`/api/usuarios/${telefono}`, 'DELETE').catch(() => {});
+        if (typeof programarSubidaNube === 'function') {
+            programarSubidaNube(true); 
+        }
 
         mostrarToast(`Miembro "${nombre}" eliminado`, 'info');
         actualizarSelectUsuarios();
@@ -1397,16 +1981,27 @@ function cargarSelectCategorias() {
     const selectFiltro = document.getElementById('filterCategoria');
     const selectRec = document.getElementById('recCategoria');
 
-    selectOp.innerHTML = '';
-    selectRec.innerHTML = '';
-    selectFiltro.innerHTML = '<option value="todas">Todas las Categorías</option>';
+    const prevFiltroCat = (estado.filtros && estado.filtros.categoria) || (selectFiltro && selectFiltro.value) || 'todas';
+
+    if (selectOp) selectOp.innerHTML = '';
+    if (selectRec) selectRec.innerHTML = '';
+    if (selectFiltro) selectFiltro.innerHTML = '<option value="todas">Todas las Categorías</option>';
 
     Object.entries(CATEGORIAS_CONFIG).forEach(([nombre, conf]) => {
         const opt = `<option value="${nombre}">${conf.icon} ${nombre}</option>`;
-        selectOp.innerHTML += opt;
-        selectRec.innerHTML += opt;
-        selectFiltro.innerHTML += opt;
+        if (selectOp) selectOp.innerHTML += opt;
+        if (selectRec) selectRec.innerHTML += opt;
+        if (selectFiltro) selectFiltro.innerHTML += opt;
     });
+
+    // Preservar el filtro si sigue siendo válido; si no, volver a "todas"
+    try {
+        if (selectFiltro) {
+            const valida = Array.from(selectFiltro.options || []).some(o => o.value === prevFiltroCat);
+            selectFiltro.value = valida ? prevFiltroCat : 'todas';
+            estado.filtros.categoria = selectFiltro.value;
+        }
+    } catch (e) {}
 
     actualizarSelectUsuarios();
 }
@@ -1415,13 +2010,25 @@ function actualizarSelectUsuarios() {
     const selectOpUser = document.getElementById('opTelefono');
     const selectFilterUser = document.getElementById('filterUsuario');
 
-    selectOpUser.innerHTML = '';
-    selectFilterUser.innerHTML = '<option value="todos">Todos los Miembros</option>';
+    const prevFiltroUsr = (estado.filtros && estado.filtros.usuario) || (selectFilterUser && selectFilterUser.value) || 'todos';
 
-    Object.entries(estado.usuarios).forEach(([tel, nom]) => {
-        selectOpUser.innerHTML += `<option value="${tel}">${nom} (${tel})</option>`;
-        selectFilterUser.innerHTML += `<option value="${tel}">${nom}</option>`;
+    if (selectOpUser) selectOpUser.innerHTML = '';
+    if (selectFilterUser) selectFilterUser.innerHTML = '<option value="todos">Todos los Miembros</option>';
+
+    Object.entries(estado.usuarios || {}).forEach(([tel, nom]) => {
+        if (selectOpUser) selectOpUser.innerHTML += `<option value="${tel}">${nom} (${tel})</option>`;
+        if (selectFilterUser) selectFilterUser.innerHTML += `<option value="${tel}">${nom}</option>`;
     });
+    // Preservar el filtro de miembro si sigue existiendo; si no, volver a "todos"
+    // (antes se reconstruía el desplegable pero estado.filtros conservaba el id viejo
+    // y todo quedaba en "Mostrando 0 de N" aunque el desplegable mostrara "Todos").
+    try {
+        if (selectFilterUser) {
+            const valida = prevFiltroUsr === 'todos' || Array.from(selectFilterUser.options || []).some(o => o.value === prevFiltroUsr);
+            selectFilterUser.value = valida ? prevFiltroUsr : 'todos';
+            estado.filtros.usuario = selectFilterUser.value;
+        }
+    } catch (e) {}
     try { if (typeof refrescarHogarUI === 'function') refrescarHogarUI(); } catch (e) {}
 }
 
@@ -1456,11 +2063,17 @@ function abrirModalOperacion(prefill = {}) {
     document.getElementById('opCantidad').value = prefill.cantidad || '';
     document.getElementById('opConcepto').value = prefill.concepto || '';
     document.getElementById('opCategoria').value = prefill.categoria || 'Alimentación';
-    document.getElementById('opFormaPago').value = prefill.formaPago || '';
-    document.getElementById('opEsCompartido').checked = false;
+    document.getElementById('opFormaPago').value = prefill.formaPago || 'efectivo';
+    // En edición respetar el valor guardado; en creación, compartido por defecto (como el HTML checked)
+    if (prefill.id !== undefined && prefill.id !== '' && prefill.id !== null) {
+        document.getElementById('opEsCompartido').checked = !!prefill.esCompartido;
+    } else {
+        document.getElementById('opEsCompartido').checked = prefill.esCompartido !== undefined ? !!prefill.esCompartido : true;
+    }
 
-    const fechaDefecto = prefill.fecha || fechaHoyISO();
-    document.getElementById('opFecha').value = fechaDefecto.substring(0, 10);
+    // Usar fecha local para el input (evita desfase UTC en edición)
+    const fechaDefecto = prefill.fecha ? isoAFechaInput(prefill.fecha) : fechaHoyISO();
+    document.getElementById('opFecha').value = String(fechaDefecto).substring(0, 10);
 
     document.getElementById('groupEsFijoCheckbox').style.display = prefill.id ? 'none' : 'block';
     document.getElementById('opEsFijo').checked = false;
@@ -1495,14 +2108,22 @@ async function guardarOperacion(e) {
     const fecha = document.getElementById('opFecha').value;
     const telefono = document.getElementById('opTelefono').value;
     if (!telefono) {
-        mostrarToast('Debes elegir obligatoriamente el miembro que paga o cobra.', 'danger');
+        if (Object.keys(estado.usuarios || {}).length === 0) {
+            mostrarToast('Primero añade un miembro en Reparto Familiar para poder guardar operaciones.', 'danger');
+        } else {
+            mostrarToast('Debes elegir obligatoriamente el miembro que paga o cobra.', 'danger');
+        }
         return;
     }
     const esCompartido = document.getElementById('opEsCompartido').checked;
-    const esFijo = document.getElementById('opEsFijo').checked;
+    const esFijo = document.getElementById('opEsFijo') ? document.getElementById('opEsFijo').checked : false;
 
     if (!concepto || isNaN(cantidad) || cantidad <= 0) {
         mostrarToast('Indica un concepto y una cantidad válida.', 'danger');
+        return;
+    }
+    if (!fecha) {
+        mostrarToast('Indica la fecha de la operación.', 'danger');
         return;
     }
 
@@ -1513,25 +2134,27 @@ async function guardarOperacion(e) {
         categoria,
         cantidad,
         esCompartido,
-        formaPago: document.getElementById('opFormaPago').value || '',
-        fecha: new Date(fecha).toISOString()
+        formaPago: document.getElementById('opFormaPago').value || 'efectivo',
+        fecha: fechaInputALocalISO(fecha)
     };
 
+    let savedId = id || null;
     if (id) {
         const index = estado.transacciones.findIndex(t => t.id == id);
         if (index !== -1) {
             estado.transacciones[index] = { ...estado.transacciones[index], ...payload };
             estado.transacciones[index]._mod = Date.now();
+            savedId = estado.transacciones[index].id;
         }
         guardarLocalmente();
-        api(`/api/transaccion/${id}`, 'PUT', payload).catch(() => {});
-        mostrarToast('Operación actualizada con éxito', 'success');
+        try { api(`/api/transaccion/${id}`, 'PUT', payload).catch(() => {}); } catch (e) {}
     } else {
         const nuevaOp = {
             id: Date.now(),
             ...payload
         };
         estado.transacciones.push(nuevaOp);
+        savedId = nuevaOp.id;
 
         if (esFijo) {
             const diaFijo = parseInt(document.getElementById('opDiaFijo').value) || 1;
@@ -1545,16 +2168,72 @@ async function guardarOperacion(e) {
                 activo: true
             };
             estado.recurrentes.push(nuevoRec);
-            api('/api/recurrente', 'POST', nuevoRec).catch(() => {});
+            try { api('/api/recurrente', 'POST', nuevoRec).catch(() => {}); } catch (e) {}
         }
 
         guardarLocalmente();
-        api('/api/transaccion', 'POST', payload).catch(() => {});
-        mostrarToast('Operación guardada con éxito', 'success');
+        try { api('/api/transaccion', 'POST', payload).catch(() => {}); } catch (e) {}
     }
 
+    // GARANTÍA DE VISIBILIDAD EN "Movimientos del Mes" (Resumen):
+    // 1. Saltar al mes de la operación (aunque fuera distinto/futuro).
+    // 2. Limpiar los 5 filtros para que nada la oculte.
+    // 3. Ir a la pestaña Resumen y repintar todo.
+    const claveOp = claveMesDeFechaInput(fecha);
+    if (claveOp) {
+        estado.mesSeleccionado = claveOp;
+        try {
+            const partes = claveOp.split('-').map(Number);
+            estado.mesCalendario = { anio: partes[0], mes: partes[1] - 1 };
+        } catch (e) {}
+    }
+    try {
+        estado.filtros = { busqueda: '', tipo: 'todos', categoria: 'todas', usuario: 'todos', formaPago: 'todos' };
+        const inBus = document.getElementById('inputSearchTx'); if (inBus) inBus.value = '';
+        const fTipo = document.getElementById('filterTipo'); if (fTipo) fTipo.value = 'todos';
+        const fCat = document.getElementById('filterCategoria'); if (fCat) fCat.value = 'todas';
+        const fUsr = document.getElementById('filterUsuario'); if (fUsr) fUsr.value = 'todos';
+        const fPago = document.getElementById('filterFormaPago'); if (fPago) fPago.value = 'todos';
+    } catch (err) {}
+
     cerrarModal('modalOperacion');
-    actualizarVistas();
+    try { inicializarSelectorMeses(); } catch (e) {}
+    try { cambiarTab('resumen'); } catch (e) {}
+    try { actualizarVistas(); } catch (e) {}
+
+    // Verificación: la operación tiene que estar en el mes visible tras guardar.
+    // Si algo la sigue ocultando, se fuerza de nuevo y se avisa por consola/toast.
+    try {
+        const partesV = String(estado.mesSeleccionado).split('-').map(Number);
+        const opsVisibles = obtenerOperacionesMes(partesV[0], partesV[1]);
+        const visible = opsVisibles.some(o => String(o.id) === String(savedId));
+        if (!visible) {
+            console.error('[Gastos] La operación guardada no quedó visible en', estado.mesSeleccionado, 'id=', savedId);
+            mostrarToast('Se guardó pero no quedó visible: pulsa ✖ Limpiar filtros', 'danger');
+        } else {
+            const nombres = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+            mostrarToast(`Operación guardada y visible en ${nombres[partesV[1]-1]} ${partesV[0]}`, 'success');
+        }
+    } catch (e) {
+        mostrarToast('Operación guardada con éxito', 'success');
+    }
+    try { if (savedId !== null && savedId !== undefined) resaltarMovimiento(savedId); } catch (e) {}
+}
+
+function resaltarMovimiento(idBuscado) {
+    try {
+        const sel = `[data-id="${String(idBuscado)}"]`;
+        const el = document.querySelector('#txListContainer ' + sel);
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const prevOutline = el.style.outline;
+        const prevBg = el.style.background;
+        el.style.outline = '3px solid var(--primary, #7c3aed)';
+        el.style.outlineOffset = '2px';
+        setTimeout(() => {
+            try { el.style.outline = prevOutline || ''; el.style.background = prevBg || ''; } catch (e) {}
+        }, 2600);
+    } catch (e) {}
 }
 
 function editarOperacion(id) {

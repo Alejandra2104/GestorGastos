@@ -34,6 +34,9 @@ function leerDatos() {
             transacciones: [],
             recurrentes: [],
             metasPorMes: {},
+            metasCompartidas: {},
+            planesAmortizacion: [],
+            repartoPredeterminado: {},
             usuarios: {}
         };
         guardarDatos(datosIniciales);
@@ -45,6 +48,9 @@ function leerDatos() {
         if (!parseado.transacciones) parseado.transacciones = [];
         if (!parseado.recurrentes) parseado.recurrentes = [];
         if (!parseado.metasPorMes) parseado.metasPorMes = {};
+        if (!parseado.metasCompartidas) parseado.metasCompartidas = {};
+        if (!parseado.planesAmortizacion) parseado.planesAmortizacion = [];
+        if (!parseado.repartoPredeterminado) parseado.repartoPredeterminado = {};
         if (!parseado.usuarios) {
             parseado.usuarios = {
                 "600111222": "Alejandro",
@@ -54,7 +60,7 @@ function leerDatos() {
         return parseado;
     } catch (e) {
         console.error("Error leyendo data.json:", e);
-        return { transacciones: [], recurrentes: [], metasPorMes: {}, usuarios: {} };
+        return { transacciones: [], recurrentes: [], metasPorMes: {}, metasCompartidas: {}, planesAmortizacion: [], repartoPredeterminado: {}, usuarios: {} };
     }
 }
 
@@ -70,7 +76,7 @@ app.get('/api/datos', (req, res) => {
 
 // Crear nueva transacción
 app.post('/api/transaccion', (req, res) => {
-    const { telefono, tipo, concepto, categoria, cantidad, esCompartido, fecha } = req.body;
+    const { telefono, tipo, concepto, categoria, cantidad, esCompartido, formaPago, fecha } = req.body;
     if (!concepto || cantidad === undefined || isNaN(parseFloat(cantidad))) {
         return res.status(400).json({ error: 'Concepto y cantidad válidos son obligatorios' });
     }
@@ -84,6 +90,7 @@ app.post('/api/transaccion', (req, res) => {
         categoria: categoria || 'General',
         cantidad: Math.abs(parseFloat(cantidad)),
         esCompartido: !!esCompartido,
+        formaPago: formaPago === 'tarjeta' ? 'tarjeta' : (formaPago === 'efectivo' ? 'efectivo' : (formaPago || '')),
         fecha: fecha ? new Date(fecha).toISOString() : new Date().toISOString()
     };
 
@@ -95,7 +102,7 @@ app.post('/api/transaccion', (req, res) => {
 // Modificar transacción existente
 app.put('/api/transaccion/:id', (req, res) => {
     const id = parseInt(req.params.id);
-    const { telefono, tipo, concepto, categoria, cantidad, esCompartido, fecha } = req.body;
+    const { telefono, tipo, concepto, categoria, cantidad, esCompartido, formaPago, fecha } = req.body;
     const datos = leerDatos();
 
     const index = datos.transacciones.findIndex(t => t.id === id);
@@ -110,6 +117,7 @@ app.put('/api/transaccion/:id', (req, res) => {
     if (categoria !== undefined) t.categoria = categoria;
     if (cantidad !== undefined && !isNaN(parseFloat(cantidad))) t.cantidad = Math.abs(parseFloat(cantidad));
     if (esCompartido !== undefined) t.esCompartido = !!esCompartido;
+    if (formaPago !== undefined) t.formaPago = formaPago;
     if (fecha !== undefined) t.fecha = new Date(fecha).toISOString();
 
     guardarDatos(datos);
@@ -220,6 +228,32 @@ app.post('/api/metas-lote', (req, res) => {
     }
     guardarDatos(datos);
     res.json({ success: true, metasPorMes: datos.metasPorMes });
+});
+
+// Guardar metas compartidas y reparto
+app.post('/api/metas-compartidas', (req, res) => {
+    const { metasCompartidas, repartoPredeterminado } = req.body;
+    const datos = leerDatos();
+    if (metasCompartidas && typeof metasCompartidas === 'object') {
+        datos.metasCompartidas = metasCompartidas;
+    }
+    if (repartoPredeterminado && typeof repartoPredeterminado === 'object') {
+        datos.repartoPredeterminado = repartoPredeterminado;
+    }
+    guardarDatos(datos);
+    res.json({ success: true, metasCompartidas: datos.metasCompartidas, repartoPredeterminado: datos.repartoPredeterminado });
+});
+
+// Guardar planes de amortización
+app.post('/api/planes-amortizacion', (req, res) => {
+    const { planes } = req.body;
+    if (!Array.isArray(planes)) {
+        return res.status(400).json({ error: 'Array de planes inválido' });
+    }
+    const datos = leerDatos();
+    datos.planesAmortizacion = planes;
+    guardarDatos(datos);
+    res.json({ success: true, planesAmortizacion: datos.planesAmortizacion });
 });
 
 // Actualizar nombres / usuarios

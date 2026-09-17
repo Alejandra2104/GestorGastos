@@ -50,7 +50,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="style.css?v=1.7.3">
+    <link rel="stylesheet" href="style.css?v=1.7.4">
     <style>
       /* Banner de instalación PWA + estado offline (ligero, no depende de style.css) */
       #pwaInstallBar{display:none;position:sticky;top:0;z-index:900;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;padding:10px 14px;font-size:.88rem;box-shadow:0 4px 14px rgba(124,58,237,.4)}
@@ -221,18 +221,70 @@
                         <h2 class="card-title">🎯 Meta de Ahorro del Mes</h2>
                         <p class="card-subtitle">Fija un objetivo y analiza el rendimiento financiero mensual</p>
                     </div>
-                    <div class="goal-inputs-inline">
-                        <input type="number" step="10" min="0" id="inputMetaAhorro" class="goal-input-field" placeholder="Ej: 300">
+
+                    <!-- Cuadro de Base de Amortización Activa (si el mes está cubierto por un plan de amortización previo) -->
+                    <div id="boxBaseAmortizacion" class="box-base-amortizacion" style="display: none;">
+                        <div class="base-amort-info">
+                            <span class="base-amort-tag">📌 Plan Amortización Activo</span>
+                            <span id="lblBaseAmortTexto">Base obligatoria de este mes: <strong>0.00 €</strong></span>
+                        </div>
+                        <div class="base-amort-inputs">
+                            <label for="inputAporteExtraMeta" style="font-weight:600;">➕ Aporte adicional voluntario:</label>
+                            <input type="number" step="10" min="0" id="inputAporteExtraMeta" class="goal-input-field" placeholder="0" style="width: 100px; padding: 6px 10px;" oninput="actualizarMetaConAporteExtra()">
+                            <span class="base-amort-arrow">➔</span>
+                            <span id="lblMetaTotalCalculada" style="font-weight: 700; color: var(--primary);">Meta Total Resultante: 0.00 €</span>
+                        </div>
+                    </div>
+
+                    <div class="goal-inputs-inline" style="margin-top: 8px;">
+                        <input type="number" step="10" min="0" id="inputMetaAhorro" class="goal-input-field" placeholder="Ej: 300" oninput="alCambiarInputMetaAhorro()">
                         <button class="btn btn-outline" style="padding: 8px 14px;" onclick="guardarMetaAhorro()">Guardar Meta</button>
                     </div>
                     <label class="checkbox-card" style="margin-top:8px;display:inline-block;cursor:pointer;">
                         <input type="checkbox" id="opMetaCompartida" onchange="toggleMetaCompartida()">
-                        <span>Meta compartida (ajustar reparto entre miembros)</span>
+                        <span>Meta compartida (ajustar reparto reactivo entre miembros)</span>
                     </label>
-                    <div id="metaCompartidaSection" style="display:none;margin-top:10px;padding:10px;background:var(--bg-card-hover);border-radius:var(--radius-md);border:1px dashed var(--primary-light);">
-                        <h4 style="font-size:.85rem;margin-bottom:8px;font-weight:700;">Reparto de la meta entre miembros</h4>
-                        <div id="metaCompartidaList"></div>
-                        <button class="btn btn-outline" style="margin-top:8px;padding:6px 12px;font-size:.82rem;" onclick="guardarMetaCompartida()">Guardar reparto</button>
+                    <div id="metaCompartidaSection" class="meta-compartida-card" style="display:none;">
+                        <div class="meta-compartida-header">
+                            <h4 style="font-size:.88rem;font-weight:700;margin:0;">⚖️ Reparto Porcentual de la Meta</h4>
+                            <span id="badgeTotalPorcentaje" class="badge-pct-status">Suma: 100% ✓</span>
+                        </div>
+                        <p style="font-size:0.78rem;color:var(--text-secondary);margin:4px 0 10px 0;">
+                            Indica el % de un miembro; el resto se calculará automáticamente para sumar siempre el 100%.
+                        </p>
+                        <div id="metaCompartidaList" class="meta-compartida-list"></div>
+                        <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+                            <button class="btn btn-outline" style="padding:6px 14px;font-size:.82rem;" onclick="guardarMetaCompartida()">💾 Guardar Reparto</button>
+                            <span id="lblMetaCompartidaInfo" style="font-size:0.78rem;color:var(--text-muted);"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Banner de Amortización Activa y Prórroga -->
+                <div id="bannerAmortizacionActiva" class="banner-amortizacion-activa" style="display: none;">
+                    <div class="amortizacion-header">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span style="font-size: 1.1rem;">📋</span>
+                            <strong id="lblAmortizacionTitulo" style="color: var(--primary);">Plan de Amortización Activo</strong>
+                            <span id="badgeAmortizacionProgreso" class="badge-amortizacion">Mes 1 de 6</span>
+                            <span id="badgeAmortizacionProrroga" class="badge-prorroga" style="display: none;">⏱️ Prórroga Activa hasta 12 meses</span>
+                        </div>
+                        <button class="btn-saldar-anticipado" onclick="saldarDeudaAnticipada()">
+                            🤝 Saldar Deuda Anticipadamente
+                        </button>
+                    </div>
+                    <div class="amortizacion-body">
+                        <div class="amortizacion-kpis">
+                            <div class="amort-kpi-item">
+                                <span class="amort-kpi-label">Saldo total pendiente:</span>
+                                <strong id="lblAmortSaldoPendiente" class="amort-kpi-val" style="color: var(--danger);">0.00 €</strong>
+                            </div>
+                            <div class="amort-kpi-item">
+                                <span class="amort-kpi-label">Cuota base de este mes:</span>
+                                <strong id="lblAmortCuotaMes" class="amort-kpi-val" style="color: var(--primary);">+0.00 €/mes</strong>
+                            </div>
+                        </div>
+                        <div id="lblAmortDesgloseMiembros" class="amort-desglose-miembros"></div>
                     </div>
                 </div>
 
@@ -252,8 +304,14 @@
 
                 <div id="bannerDeficit" class="banner banner-deficit">
                     <div>
-                        ⚠️ <strong>Déficit de Ahorro:</strong> Faltan <strong id="lblDeficitImporte">0.00 €</strong> para cumplir el objetivo del mes.
-                        <div class="prorate-controls">
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                            ⚠️ <strong>Déficit de Ahorro:</strong> Faltan <strong id="lblDeficitImporte">0.00 €</strong> para cumplir el objetivo del mes.
+                        </div>
+
+                        <!-- Desglose por miembro del déficit -->
+                        <div id="lblDeficitDesglose" class="deficit-desglose-container"></div>
+
+                        <div class="prorate-controls" style="margin-top: 10px;">
                             <span>¿Deseáis amortizar este desfase en:</span>
                             <select id="selectMesesProrrateo" class="filter-select" style="min-width: 100px; padding: 4px 8px;" onchange="actualizarCalculoProrrateo()">
                                 <option value="2">2 meses</option>
@@ -344,6 +402,8 @@
                         <option value="todos">Todos los Miembros</option>
                         <!-- Rellenado dinámicamente -->
                     </select>
+
+                    <button type="button" class="filter-select" style="cursor:pointer;" onclick="limpiarFiltros()" title="Mostrar todos los movimientos sin filtros">✖ Limpiar</button>
                 </div>
 
                 <!-- Contenedor del Listado -->
@@ -545,7 +605,7 @@
                 <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
 
                 <p style="font-size:.8rem;color:var(--text-secondary);margin:0">
-                    📦 Versión <strong>1.7.3</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
+                    📦 Versión <strong>1.7.4</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
                 </p>
             </div>
         </main>
@@ -733,9 +793,9 @@
     </div>
 
     <!-- Script Principal de la Aplicación -->
-    <script src="app.js?v=1.7.3"></script>
+    <script src="app.js?v=1.7.4"></script>
     <script src="nube-config.js"></script>
-    <script src="nube.js?v=1.7.3"></script>
+    <script src="nube.js?v=1.7.4"></script>
     <script>
     // Lógica de instalación PWA separada del negocio (funciona en todos los navegadores)
     (function(){
@@ -829,8 +889,8 @@
 
       // No mostrar si la app ya está instalada (modo standalone)
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-      const hidden = localStorage.getItem('instruct_hidden') === '1';
-      const installed = localStorage.getItem('pwa_installed') === '1';
+      const hidden = localStorage.getItem('instruct_hidden_v2') === '1';
+      const installed = localStorage.getItem('pwa_installed_v2') === '1';
 
       if (isStandalone || hidden || installed) {
         instructBanner.style.display = 'none';
@@ -862,14 +922,14 @@
       if (instructClose) {
         instructClose.addEventListener('click', () => {
           instructBanner.style.display = 'none';
-          localStorage.setItem('instruct_hidden', '1');
+          localStorage.setItem('instruct_hidden_v2', '1');
         });
       }
 
       // Al instalar, ocultar permanentemente
       window.addEventListener('appinstalled', () => {
         instructBanner.style.display = 'none';
-        localStorage.setItem('pwa_installed', '1');
+        localStorage.setItem('pwa_installed_v2', '1');
       });
 
       // El botón Instalar redirige al PWA install prompt del banner principal
