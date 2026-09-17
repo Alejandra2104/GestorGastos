@@ -68,6 +68,16 @@
       #modoBadge[data-modo="local"]{background:#fef9c3;color:#854d0e;border-color:#fde68a}
       body.dark-mode #modoBadge{background:#251c4d;color:#d8c8ff;border-color:#3b2f6b}
       body.dark-mode #modoBadge[data-modo="local"]{background:#3b2f0b;color:#fde68a;border-color:#854d0e}
+      /* Banner instrucciones pre-instalación (INSTRUCC-INST) */
+      #instructBanner{display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#1a0a3e,#2d1b69);color:#fff;padding:14px 18px;font-size:.88rem;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+      #instructBanner .instruct-inner{max-width:1100px;margin:0 auto;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+      #instructBanner .instruct-text{flex:1;min-width:260px}
+      #instructBanner .instruct-steps{margin-top:6px;font-size:.8rem;opacity:.92;line-height:1.5}
+      #instructBanner .instruct-steps strong{color:#c4b5fd}
+      #instructBanner button{border:none;border-radius:999px;padding:8px 16px;font-weight:800;cursor:pointer;font-size:.85rem}
+      #instructClose{background:rgba(255,255,255,.15);color:#fff}
+      #instructInstall{background:#fff;color:#1a0a3e}
+      @media(max-width:600px){#instructBanner{padding:10px 12px;font-size:.82rem}#instructBanner .instruct-steps{font-size:.76rem}}
     </style>
 </head>
 <body>
@@ -683,6 +693,22 @@
     <div id="offlineBadge">📶 Sin conexión — modo offline</div>
     <div id="iosHelp">📱 En <strong>iPhone / iPad / Mac (Safari)</strong>: pulsa <strong>Compartir ⬆️ → Añadir a pantalla de inicio</strong> para instalar la app. <button id="iosHelpClose" style="margin-left:8px;border:1px solid #cbd5e1;border-radius:8px;padding:4px 10px;cursor:pointer">Entendido</button></div>
 
+    <!-- =====================================================================
+         BANNER INSTRUCC-INST: Instrucciones pre-instalación por sistema operativo
+         ===================================================================== -->
+    <div id="instructBanner" role="banner" aria-label="Instrucciones de instalación por sistema operativo">
+      <div class="instruct-inner">
+        <div class="instruct-text">
+          <strong>📲 Instala Gestor de Gastos como app (funciona offline)</strong>
+          <div class="instruct-steps" id="instructStepsText"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <button id="instructInstall" type="button">Instalar app</button>
+          <button id="instructClose" type="button">Cerrar</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Script Principal de la Aplicación -->
     <script src="app.js?v=1.7.3"></script>
     <script src="nube-config.js"></script>
@@ -764,6 +790,76 @@
         setInterval(checkUpdate, 30 * 60 * 1000);
         document.getElementById('pwaUpdateBtn').addEventListener('click', () => {
           navigator.serviceWorker.ready.then((reg) => { if (reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'}); else window.location.reload(); });
+        });
+      }
+    })();
+
+    // ====================================================================
+    // Lógica del banner INSTRUCC-INST (instrucciones pre-instalación por SO)
+    // ====================================================================
+    (function(){
+      const instructBanner = document.getElementById('instructBanner');
+      const instructClose = document.getElementById('instructClose');
+      const instructInstall = document.getElementById('instructInstall');
+      const instructSteps = document.getElementById('instructStepsText');
+      if (!instructBanner || !instructSteps) return;
+
+      // No mostrar si la app ya está instalada (modo standalone)
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      const hidden = localStorage.getItem('instruct_hidden') === '1';
+      const installed = localStorage.getItem('pwa_installed') === '1';
+
+      if (isStandalone || hidden || installed) {
+        instructBanner.style.display = 'none';
+        return;
+      }
+
+      // Instrucciones específicas por sistema operativo
+      const ua = navigator.userAgent || '';
+      let msg = '';
+      if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) {
+        msg = '<strong>iPhone/iPad/Mac (Safari):</strong> abre el menú <strong>Compartir ⬆️</strong> → <strong>Añadir a pantalla de inicio</strong> → Espera a que se cree el ícono → Tócalo para abrir la app en modo nativo.';
+      } else if (/Android/i.test(ua)) {
+        msg = '<strong>Android:</strong> abre el menú (⋮ ⋮) de Chrome/Edge → <strong>"Añadir a pantalla de inicio"</strong> → Toca el ícono creado en tu escritorio.';
+      } else if (/Windows/i.test(ua)) {
+        msg = '<strong>Windows:</strong> abre el menú de Chrome/Edge (⋮) → <strong>"Instalar como app"</strong> o <strong>"Crear acceso directo"</strong>. También puedes usar la versión de escritorio desde la web.';
+      } else if (/Macintosh|Mac OS X/i.test(ua)) {
+        msg = '<strong>macOS:</strong> en Safari usa <strong>Compartir ⬆️ → Añadir a pantalla de inicio</strong>. En Chrome/Edge usa el menú <strong>"Instalar como app"</strong>.';
+      } else if (/Linux/i.test(ua)) {
+        msg = '<strong>Linux:</strong> abre el menú de Chrome/Edge → <strong>"Instalar como app"</strong> / <strong>"Crear atajo"</strong>. Compatible con todas las distribuciones.';
+      } else {
+        msg = '<strong>General:</strong> usa el botón "Instalar app" o, en Safari (iOS/Mac), <strong>Compartir → Añadir a pantalla de inicio</strong>.';
+      }
+      instructSteps.innerHTML = msg;
+
+      // Mostrar el banner después de un breve delay para no interrumpir la carga
+      setTimeout(() => { instructBanner.style.display = 'block'; }, 1500);
+
+      // Cerrar banner (recuerda la preferencia)
+      if (instructClose) {
+        instructClose.addEventListener('click', () => {
+          instructBanner.style.display = 'none';
+          localStorage.setItem('instruct_hidden', '1');
+        });
+      }
+
+      // Al instalar, ocultar permanentemente
+      window.addEventListener('appinstalled', () => {
+        instructBanner.style.display = 'none';
+        localStorage.setItem('pwa_installed', '1');
+      });
+
+      // El botón Instalar redirige al PWA install prompt del banner principal
+      if (instructInstall) {
+        instructInstall.addEventListener('click', () => {
+          const mainBtn = document.getElementById('pwaInstallBtn');
+          if (mainBtn) mainBtn.click();
+          else {
+            // Fallback: redirigir a la URL manual de instalación
+            if (isIOS || /Safari/i.test(ua)) {
+              window.open('https://www.apple.com/ios/safari/', '_blank');
+            }
+          }
         });
       }
     })();

@@ -1,0 +1,47 @@
+<!-- Banner instrucciones pre-instalación — INSTRUCC-INST -->
+<!-- Muestra pasos por SO antes de instalar; oculta automáticamente tras instalar -->
+<div id="instructBanner" role="banner" aria-label="Instrucciones de instalación por sistema operativo">
+  <div class="instruct-inner">
+    <div class="instruct-text">
+      <strong>📲 Instala Gestor de Gastos como app (funciona offline)</strong>
+      <div class="instruct-steps" id="instructStepsText"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button id="instructInstall" onclick="document.getElementById('pwaInstallBtn').click(); document.getElementById('instructBanner').style.display='none';" type="button">Instalar app</button>
+      <button id="instructClose" onclick="document.getElementById('instructBanner').style.display='none'; localStorage.setItem('instruct_hidden','1');" type="button">Cerrar</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  // Solo mostrar si aún no se instaló / no se cerró
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) return;
+  if (localStorage.getItem('instruct_hidden') === '1') return;
+  const ua = navigator.userAgent || '';
+  const steps = document.getElementById('instructStepsText');
+  if (!steps) return;
+  // Windows / Linux / Mac (Chrome/Edge/Brave/Opera/Safari desktop)
+  if (/Windows/i.test(ua)) {
+    steps.innerHTML = '<strong>Windows (Edge/Chrome):</strong> Menú ⋮ → "Instalar como app" o "Crear acceso directo" → Se instala automáticamente. <br><em>También puedes descargar la versión de escritorio desde la página.</em>';
+  } else if (/Macintosh/i.test(ua) || /Mac OS X/i.test(ua)) {
+    if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) {
+      steps.innerHTML = '<strong>Mac (Safari):</strong> Menú Compartir ⬆️ → "Añadir a pantalla de inicio" (o abrir como app). <br><em>En Mac con Chrome/Edge: usa el botón Instalación en la barra de dirección.</em>';
+    } else {
+      steps.innerHTML = '<strong>Mac (Chrome/Edge):</strong> Menú ⋮ → "Instalar como app" o "Crear acceso directo a la ventana" → Abre sin barra de navegación. <br><em>Funciona igual que una app nativa.</em>';
+    }
+  } else if (/iPhone|iPad|iPod/i.test(ua) && !/MicrosoftStream/i.test(ua)) {
+    steps.innerHTML = '<strong>iPhone/iPad (Safari):</strong> Compartir ⬆️ → Añadir a pantalla de inicio → Espera el ícono → Abre desde el escritorio. <br><em>Debe ser Safari (no Chrome/Edge) para instalar como PWA nativa.</em>';
+  } else if (/Android/i.test(ua)) {
+    steps.innerHTML = '<strong>Android (Chrome/Edge):</strong> Menú ⋮ → "Añadir a pantalla de inicio" → Se crea acceso directo; toca el ícono para abrir como app independiente. <br><em>No requiere instalación por Play Store; funciona 100% offline.</em>';
+  } else if (/Linux/i.test(ua)) {
+    steps.innerHTML = '<strong>Linux (Chrome/Edge):</strong> Menú ⋮ → "Instalar como app" / "Crear atajo" → Se instala de forma nativa sin necesidad de repositorios adicionales. <br><em>Compatible con todas las distribuciones principales.</em>';
+  } else {
+    steps.innerHTML = '<strong>Instrucciones generales:</strong> En Chrome/Edge: Menú ⋮ → "Instalar como app". En Safari (iOS/Mac): Compartir → Añadir a pantalla de inicio. <br><em>La app se instala para funcionar sin conexión.</em>';
+  }
+  // Mostrar después de comprobar que no está instalada
+  setTimeout(() => {
+    const banner = document.getElementById('instructBanner');
+    if (banner && !window.matchMedia('(display-mode: standalone)').matches && window.navigator.standalone !== true) banner.style.display = 'block';
+  }, 1200);
+})();
+</script>
