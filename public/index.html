@@ -225,6 +225,15 @@
                         <input type="number" step="10" min="0" id="inputMetaAhorro" class="goal-input-field" placeholder="Ej: 300">
                         <button class="btn btn-outline" style="padding: 8px 14px;" onclick="guardarMetaAhorro()">Guardar Meta</button>
                     </div>
+                    <label class="checkbox-card" style="margin-top:8px;display:inline-block;cursor:pointer;">
+                        <input type="checkbox" id="opMetaCompartida" onchange="toggleMetaCompartida()">
+                        <span>Meta compartida (ajustar reparto entre miembros)</span>
+                    </label>
+                    <div id="metaCompartidaSection" style="display:none;margin-top:10px;padding:10px;background:var(--bg-card-hover);border-radius:var(--radius-md);border:1px dashed var(--primary-light);">
+                        <h4 style="font-size:.85rem;margin-bottom:8px;font-weight:700;">Reparto de la meta entre miembros</h4>
+                        <div id="metaCompartidaList"></div>
+                        <button class="btn btn-outline" style="margin-top:8px;padding:6px 12px;font-size:.82rem;" onclick="guardarMetaCompartida()">Guardar reparto</button>
+                    </div>
                 </div>
 
                 <div class="progress-container">
@@ -318,6 +327,12 @@
                         <option value="gasto">Solo Gastos</option>
                         <option value="ingreso">Solo Ingresos</option>
                         <option value="compartido">Solo Compartidos</option>
+                    </select>
+
+                    <select id="filterFormaPago" class="filter-select" onchange="filtrarTransacciones()">
+                        <option value="todos">Todas las Formas</option>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="tarjeta">Tarjeta</option>
                     </select>
 
                     <select id="filterCategoria" class="filter-select" onchange="filtrarTransacciones()">
@@ -578,6 +593,14 @@
                         <label class="form-label" for="opFecha">Fecha</label>
                         <input type="date" id="opFecha" class="form-control" required>
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="opFormaPago">Forma de pago</label>
+                    <select id="opFormaPago" class="form-control">
+                        <option value="efectivo">Efectivo</option>
+                        <option value="tarjeta">Tarjeta</option>
+                    </select>
                 </div>
 
                 <div class="form-group">

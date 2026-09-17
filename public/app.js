@@ -20,7 +20,7 @@ const CATEGORIAS_CONFIG = {
     "General": { icon: "📁", color: "#94a3b8", desc: "Categoría general" }
 };
 
-const DATOS_INICIALES = { usuarios: {}, metasPorMes: {}, recurrentes: [], transacciones: [] };
+const DATOS_INICIALES = { usuarios: {}, metasPorMes: {}, metasCompartidas: {}, recurrentes: [], transacciones: [] };
 
 // Datos de ejemplo (botón "Cargar Datos de Demostración"). Ya NO se cargan solos.
 const DATOS_DEMO = {
@@ -85,6 +85,7 @@ const estado = {
     transacciones: [],
     recurrentes: [],
     metasPorMes: {},
+    metasCompartidas: {},
     usuarios: {},
     _borrados: {},
     mesSeleccionado: claveMesActual(),
@@ -108,6 +109,7 @@ function guardarLocalmente() {
             transacciones: estado.transacciones,
             recurrentes: estado.recurrentes,
             metasPorMes: estado.metasPorMes,
+            metasCompartidas: estado.metasCompartidas || {},
             usuarios: estado.usuarios
         };
         localStorage.setItem('gestor_gastos_db', JSON.stringify(payload));
@@ -125,6 +127,7 @@ function cargarLocalmente() {
             if (Array.isArray(parsed.transacciones)) estado.transacciones = parsed.transacciones;
             if (Array.isArray(parsed.recurrentes)) estado.recurrentes = parsed.recurrentes;
             if (parsed.metasPorMes && typeof parsed.metasPorMes === 'object') estado.metasPorMes = parsed.metasPorMes;
+            if (parsed.metasCompartidas && typeof parsed.metasCompartidas === 'object') estado.metasCompartidas = parsed.metasCompartidas;
             if (parsed.usuarios && typeof parsed.usuarios === 'object') estado.usuarios = parsed.usuarios;
             if (parsed._borrados && typeof parsed._borrados === 'object') estado._borrados = parsed._borrados;
             return true;
@@ -597,6 +600,7 @@ function renderMetaAhorro() {
         document.getElementById('lblDeficitImporte').textContent = `${deficit.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €`;
         actualizarCalculoProrrateo();
     }
+    try { renderMetaCompartidaUI(); } catch(e){}
 }
 
 function actualizarCalculoProrrateo() {
@@ -621,7 +625,7 @@ function actualizarCalculoProrrateo() {
     const nuevaMetaSugerida = meta + cuotaExtra;
 
     document.getElementById('lblProrrateoDetalle').innerHTML = 
-        `💡 Para absorber el desfase en <strong>${meses} meses</strong>, sugerimos sumar <strong>+${cuotaExtra.toFixed(2)} €/mes</strong> a vuestras metas futuras (total: <strong>${nuevaMetaSugerida.toFixed(2)} €/mes</strong>).`;
+        `💡 Para absorber el desfase en <strong>${meses} meses</strong>, sugerimos sumar <strong>+${cuotaExtra.toFixed(2)} €/mes</strong> a vuestras metas futuras (total: <strong>${nuevaMetaSugerida.toFixed(2)} €</strong>).`;
 }
 
 async function aplicarPlanProrrateo() {
@@ -678,6 +682,43 @@ async function guardarMetaAhorro() {
 // ==========================================================================
 // Banner Inteligente: Pico de Gasto
 // ==========================================================================
+
+function renderMetaCompartidaUI() {
+    const elMetaCompartida = document.getElementById('opMetaCompartida');
+    if (elMetaCompartida) {
+        const compartida = !!estado.metasCompartidas && !!estado.metasCompartidas[estado.mesSeleccionado];
+        elMetaCompartida.checked = compartida;
+    }
+    const listDiv = document.getElementById('metaCompartidaList');
+    if (!listDiv || !Object.keys(estado.usuarios).length) return;
+    const members = Object.entries(estado.usuarios);
+    const split = (!!estado.metasCompartidas && !!estado.metasCompartidas[estado.mesSeleccionado]) ? estado.metasCompartidas[estado.mesSeleccionado] : {};
+    const defaultPct = members.length <= 1 ? 100 : Math.round(100 / members.length);
+    listDiv.innerHTML = members.map(([tel, nom]) => {
+        const pct = split[tel] !== undefined ? split[tel] : defaultPct;
+        return `<label style="display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:.82rem;"><span style="min-width:120px;font-weight:600;">${nom} (${tel})</span><input type="number" min="0" max="100" step="5" value="${pct}" style="width:60px;padding:3px 6px;font-size:.8rem;" data-tel="${tel}" class="pct-input" oninput="ajustarPorcentajes(this)"></label>`;
+    }).join('');
+    document.getElementById('metaCompartidaSection').style.display = (document.getElementById('opMetaCompartida') && document.getElementById('opMetaCompartida').checked) ? 'block' : 'none';
+}
+
+function toggleMetaCompartida() {
+    const checked = document.getElementById('opMetaCompartida') && document.getElementById('opMetaCompartida').checked;
+    document.getElementById('metaCompartidaSection').style.display = checked ? 'block' : 'none';
+    if (checked) renderMetaCompartidaUI();
+}
+
+function ajustarPorcentajes(input) {}
+
+function guardarMetaCompartida() {
+    const inputs = document.querySelectorAll('.pct-input');
+    const reparto = {};
+    inputs.forEach(inp => { reparto[inp.getAttribute('data-tel')] = parseInt(inp.value) || 0; });
+    if (!estado.metasCompartidas) estado.metasCompartidas = {};
+    estado.metasCompartidas[estado.mesSeleccionado] = reparto;
+    guardarLocalmente();
+    mostrarToast('Reparto de meta actualizado', 'success');
+    renderMetaAhorro();
+}
 
 function renderSpikeBanner() {
     const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
@@ -892,6 +933,7 @@ function renderTransacciones() {
         if (estado.filtros.tipo === 'compartido' && !t.esCompartido) return false;
         if (estado.filtros.categoria !== 'todas' && t.categoria !== estado.filtros.categoria) return false;
         if (estado.filtros.usuario !== 'todos' && t.telefono !== estado.filtros.usuario) return false;
+        if (estado.filtros.formaPago !== 'todos' && t.formaPago !== estado.filtros.formaPago) return false;
         return true;
     });
 
@@ -932,6 +974,7 @@ function renderTransacciones() {
                         <span class="pill-tag" style="background: ${catConfig.color}15; color: ${catConfig.color};">${t.categoria}</span>
                         ${t.esCompartido ? '<span class="pill-tag pill-shared">👥 Compartido</span>' : ''}
                         ${t.esFijo ? '<span class="pill-tag pill-recurring">📌 Fijo Periódico</span>' : ''}
+                        <span class="pill-tag pill-pago" style="background: #f3f4f6; color: #6b7280; font-size: 0.75rem;">${t.formaPago === 'efectivo' ? '💵 Efectivo' : t.formaPago === 'tarjeta' ? '💳 Tarjeta' : ''}</span>
                     </div>
                 </div>
             </div>
@@ -1402,13 +1445,19 @@ function abrirModalOperacion(prefill = {}) {
     document.getElementById('formOperacion').reset();
     document.getElementById('opId').value = prefill.id || '';
     document.getElementById('modalOperacionTitle').textContent = prefill.id ? 'Editar Operación' : 'Nueva Operación';
-    
+
+    const userKeys = Object.keys(estado.usuarios);
+    if (userKeys.length === 1) {
+        document.getElementById('opTelefono').value = prefill.telefono || userKeys[0];
+    } else {
+        document.getElementById('opTelefono').value = prefill.telefono || '';
+    }
     document.getElementById('opTipo').value = prefill.tipo || 'gasto';
     document.getElementById('opCantidad').value = prefill.cantidad || '';
     document.getElementById('opConcepto').value = prefill.concepto || '';
     document.getElementById('opCategoria').value = prefill.categoria || 'Alimentación';
-    document.getElementById('opTelefono').value = prefill.telefono || Object.keys(estado.usuarios)[0] || '600111222';
-    document.getElementById('opEsCompartido').checked = prefill.esCompartido !== undefined ? prefill.esCompartido : true;
+    document.getElementById('opFormaPago').value = prefill.formaPago || '';
+    document.getElementById('opEsCompartido').checked = false;
 
     const fechaDefecto = prefill.fecha || fechaHoyISO();
     document.getElementById('opFecha').value = fechaDefecto.substring(0, 10);
@@ -1446,9 +1495,7 @@ async function guardarOperacion(e) {
     const fecha = document.getElementById('opFecha').value;
     const telefono = document.getElementById('opTelefono').value;
     if (!telefono) {
-        mostrarToast('Añade primero un miembro en "Reparto Familiar".', 'danger');
-        cerrarModal('modalOperacion');
-        cambiarTab('split');
+        mostrarToast('Debes elegir obligatoriamente el miembro que paga o cobra.', 'danger');
         return;
     }
     const esCompartido = document.getElementById('opEsCompartido').checked;
@@ -1466,6 +1513,7 @@ async function guardarOperacion(e) {
         categoria,
         cantidad,
         esCompartido,
+        formaPago: document.getElementById('opFormaPago').value || '',
         fecha: new Date(fecha).toISOString()
     };
 
