@@ -451,6 +451,7 @@ function inicializarSelectorMeses() {
         if (claveMes === estado.mesSeleccionado) opt.selected = true;
         select.appendChild(opt);
     });
+    try { if (typeof inicializarSelectoresExportacion === 'function') inicializarSelectoresExportacion(); } catch (e) {}
 }
 
 function seleccionarMes(nuevoMes) {
@@ -662,6 +663,7 @@ function activarProrrogaPlan(plan) {
     plan.mesesPlazo = 12;
     plan.prorrogaActiva = true;
     plan.estado = 'prorrogado';
+    try { plan._mod = Date.now(); } catch (e) {}
     
     // Recalcular cuota mensual reducida para absorber el saldo pendiente en el plazo ampliado
     const mesesTotales = plan.mesesLista.length;
@@ -715,6 +717,7 @@ function saldarDeudaAnticipada() {
     plan.saldoPendiente = 0;
     plan.estado = 'liquidado_anticipado';
     plan.fechaLiquidacion = new Date().toISOString();
+    try { plan._mod = Date.now(); } catch (e) {}
 
     // Eliminar las cuotas de amortización base de los meses futuros que pertenecían a este plan
     const idxActual = plan.mesesLista.indexOf(estado.mesSeleccionado);
@@ -850,6 +853,7 @@ function renderMetaAhorro() {
         if (planActivo && balanceActual - meta >= planActivo.saldoPendiente) {
             planActivo.saldoPendiente = 0;
             planActivo.estado = 'liquidado_anticipado';
+            try { planActivo._mod = Date.now(); } catch (e) {}
             guardarLocalmente();
             if (bannerAmortizacion) bannerAmortizacion.style.display = 'none';
             if (boxBaseAmortizacion) boxBaseAmortizacion.style.display = 'none';
@@ -1038,7 +1042,8 @@ async function aplicarPlanProrrateo() {
         reparto: Object.assign({}, obtenerRepartoMes(estado.mesSeleccionado)),
         estado: 'activo',
         prorrogaActiva: false,
-        fechaCreacion: new Date().toISOString()
+        fechaCreacion: new Date().toISOString(),
+        _mod: Date.now()
     };
 
     if (!estado.planesAmortizacion) estado.planesAmortizacion = [];
@@ -1059,10 +1064,27 @@ async function guardarMetaAhorro() {
         return;
     }
 
+    // La meta siempre se puede cambiar: sobrescribe el valor anterior del mes.
     estado.metasPorMes[estado.mesSeleccionado] = nuevaMeta;
     guardarLocalmente();
     api('/api/meta', 'POST', { mes: estado.mesSeleccionado, meta: nuevaMeta }).catch(() => {});
-    mostrarToast('Meta de ahorro actualizada', 'success');
+    mostrarToast(`Meta de ahorro guardada: ${nuevaMeta.toFixed(2)} € (puedes cambiarla cuando quieras)`, 'success');
+    renderMetaAhorro();
+}
+
+function eliminarMetaAhorro() {
+    if (estado.metasPorMes[estado.mesSeleccionado] === undefined) {
+        mostrarToast('Este mes no tiene meta fijada', 'info');
+        return;
+    }
+    if (!confirm('¿Quitar la meta de ahorro de este mes? Podrás fijar una nueva cuando quieras.')) {
+        return;
+    }
+    delete estado.metasPorMes[estado.mesSeleccionado];
+    const inputExtra = document.getElementById('inputAporteExtraMeta');
+    if (inputExtra) inputExtra.value = '';
+    guardarLocalmente();
+    mostrarToast('Meta eliminada: ya puedes fijar un nuevo importe', 'info');
     renderMetaAhorro();
 }
 
@@ -2064,11 +2086,11 @@ function abrirModalOperacion(prefill = {}) {
     document.getElementById('opConcepto').value = prefill.concepto || '';
     document.getElementById('opCategoria').value = prefill.categoria || 'Alimentación';
     document.getElementById('opFormaPago').value = prefill.formaPago || 'efectivo';
-    // En edición respetar el valor guardado; en creación, compartido por defecto (como el HTML checked)
+    // En edición respetar el valor guardado; en creación, sin marcar por defecto
     if (prefill.id !== undefined && prefill.id !== '' && prefill.id !== null) {
         document.getElementById('opEsCompartido').checked = !!prefill.esCompartido;
     } else {
-        document.getElementById('opEsCompartido').checked = prefill.esCompartido !== undefined ? !!prefill.esCompartido : true;
+        document.getElementById('opEsCompartido').checked = prefill.esCompartido !== undefined ? !!prefill.esCompartido : false;
     }
 
     // Usar fecha local para el input (evita desfase UTC en edición)
@@ -2322,46 +2344,214 @@ async function eliminarRecurrente(id) {
 // ==========================================================================
 
 function exportarJSON() {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+    descargarJSON({
         transacciones: estado.transacciones,
         recurrentes: estado.recurrentes,
         metasPorMes: estado.metasPorMes,
+        metasCompartidas: estado.metasCompartidas || {},
+        planesAmortizacion: estado.planesAmortizacion || [],
+        repartoPredeterminado: estado.repartoPredeterminado || {},
         usuarios: estado.usuarios
-    }, null, 2));
-    
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `gestor_gastos_backup_${new Date().toISOString().substring(0, 10)}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    }, `gestor_gastos_backup_${new Date().toISOString().substring(0, 10)}.json`);
     mostrarToast('Copia de seguridad JSON descargada', 'info');
 }
 
-function exportarCSV() {
-    const encabezados = ["ID", "Fecha", "Tipo", "Concepto", "Categoría", "Cantidad (€)", "Miembro/Teléfono", "Compartido"];
-    const filas = estado.transacciones.map(t => [
-        t.id,
-        t.fecha.substring(0, 10),
-        t.tipo,
-        `"${t.concepto.replace(/"/g, '""')}"`,
-        `"${t.categoria}"`,
-        t.cantidad.toFixed(2),
-        `"${estado.usuarios[t.telefono] || t.telefono}"`,
-        t.esCompartido ? "Sí" : "No"
-    ]);
+function descargarJSON(obj, nombreArchivo) {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(obj, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", nombreArchivo);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+}
 
+function filaCSV(t) {
+    const fechaTxt = (t && t.fecha && typeof t.fecha === 'string') ? t.fecha.substring(0, 10) : '';
+    const conceptoTxt = String((t && t.concepto) || '').replace(/"/g, '""');
+    const categoriaTxt = String((t && t.categoria) || '');
+    const cantidadNum = Number(t && t.cantidad);
+    return [
+        (t && t.id !== undefined) ? t.id : '',
+        fechaTxt,
+        (t && t.tipo) || '',
+        `"${conceptoTxt}"`,
+        `"${categoriaTxt}"`,
+        isNaN(cantidadNum) ? '0.00' : cantidadNum.toFixed(2),
+        `"${(estado.usuarios && estado.usuarios[t.telefono]) || (t && t.telefono) || ''}"`,
+        (t && t.esCompartido) ? "Sí" : "No"
+    ];
+}
+
+function descargarCSVLista(lista, nombreArchivo) {
+    const encabezados = ["ID", "Fecha", "Tipo", "Concepto", "Categoría", "Cantidad (€)", "Miembro/Teléfono", "Compartido"];
+    const filas = (lista || []).map(filaCSV);
     const csvContent = "\uFEFF" + [encabezados.join(";"), ...filas.map(f => f.join(";"))].join("\r\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement('a');
     a.href = url;
-    a.download = `movimientos_gastos_${new Date().toISOString().substring(0, 10)}.csv`;
+    a.download = nombreArchivo;
     document.body.appendChild(a);
     a.click();
     a.remove();
+    try { setTimeout(() => URL.revokeObjectURL(url), 5000); } catch (e) {}
+}
+
+function exportarCSV() {
+    descargarCSVLista(estado.transacciones, `movimientos_gastos_${new Date().toISOString().substring(0, 10)}.csv`);
     mostrarToast('Archivo CSV para Excel generado con éxito', 'info');
+}
+
+function claveMesDeTx(t) {
+    try {
+        if (t && typeof t.fecha === 'string' && /^\d{4}-\d{2}/.test(t.fecha)) return t.fecha.substring(0, 7);
+        if (t && t.fecha) {
+            const d = new Date(t.fecha);
+            if (!isNaN(d)) return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+        }
+    } catch (e) {}
+    return null;
+}
+
+function inicializarSelectoresExportacion() {
+    try {
+        const selMes = document.getElementById('exportMes');
+        const selAnio = document.getElementById('exportAnio');
+        if (!selMes && !selAnio) return;
+        const mesesSet = new Set();
+        // Últimos 12 meses siempre disponibles para que el cliente pueda
+        // elegir cualquier mes aunque aún no tenga movimientos.
+        const h0 = new Date();
+        for (let i = 0; i < 12; i++) {
+            const d = new Date(h0.getFullYear(), h0.getMonth() - i, 1);
+            mesesSet.add(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+        }
+        (estado.transacciones || []).forEach(t => {
+            const c = claveMesDeTx(t);
+            if (c && /^\d{4}-\d{2}$/.test(c)) mesesSet.add(c);
+        });
+        Object.keys(estado.metasPorMes || {}).forEach(k => {
+            if (/^\d{4}-\d{2}$/.test(k)) mesesSet.add(k);
+        });
+        if (estado.mesSeleccionado && /^\d{4}-\d{2}$/.test(estado.mesSeleccionado)) mesesSet.add(estado.mesSeleccionado);
+        const meses = Array.from(mesesSet).sort().reverse();
+        const aniosSet = new Set(meses.map(m => m.substring(0, 4)));
+        const h = new Date();
+        // Año actual y los 2 anteriores siempre elegibles.
+        aniosSet.add(String(h.getFullYear()));
+        aniosSet.add(String(h.getFullYear() - 1));
+        aniosSet.add(String(h.getFullYear() - 2));
+        const anios = Array.from(aniosSet).sort().reverse();
+        const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+        if (selMes) {
+            const prev = selMes.value;
+            selMes.innerHTML = '';
+            if (!meses.length) selMes.innerHTML = '<option value="">Sin datos</option>';
+            meses.forEach(clave => {
+                const partes = clave.split('-').map(Number);
+                const opt = document.createElement('option');
+                opt.value = clave;
+                opt.textContent = `${nombresMeses[partes[1] - 1]} ${partes[0]}`;
+                selMes.appendChild(opt);
+            });
+            if (prev && meses.includes(prev)) selMes.value = prev;
+            else if (estado.mesSeleccionado && meses.includes(estado.mesSeleccionado)) selMes.value = estado.mesSeleccionado;
+        }
+        if (selAnio) {
+            const prevA = selAnio.value;
+            selAnio.innerHTML = '';
+            anios.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a;
+                opt.textContent = a;
+                selAnio.appendChild(opt);
+            });
+            if (prevA && anios.includes(prevA)) selAnio.value = prevA;
+            else selAnio.value = String(h.getFullYear());
+        }
+    } catch (e) {}
+}
+
+function exportarCSVPorMes() {
+    const sel = document.getElementById('exportMes');
+    const mes = sel ? sel.value : estado.mesSeleccionado;
+    if (!mes || !/^\d{4}-\d{2}$/.test(mes)) {
+        mostrarToast('No hay mes disponible para exportar', 'danger');
+        return;
+    }
+    const lista = (estado.transacciones || []).filter(t => claveMesDeTx(t) === mes);
+    descargarCSVLista(lista, `movimientos_${mes}.csv`);
+    mostrarToast(lista.length ? `${lista.length} movimientos de ${mes} descargados en CSV` : `No hay movimientos en ${mes} (archivo vacío con cabeceras)`, lista.length ? 'success' : 'info');
+}
+
+function exportarJSONPorMes() {
+    const sel = document.getElementById('exportMes');
+    const mes = sel ? sel.value : estado.mesSeleccionado;
+    if (!mes || !/^\d{4}-\d{2}$/.test(mes)) {
+        mostrarToast('No hay mes disponible para exportar', 'danger');
+        return;
+    }
+    const txs = (estado.transacciones || []).filter(t => claveMesDeTx(t) === mes);
+    const metas = {};
+    if (estado.metasPorMes && estado.metasPorMes[mes] !== undefined) metas[mes] = estado.metasPorMes[mes];
+    const metasComp = {};
+    if (estado.metasCompartidas && estado.metasCompartidas[mes] !== undefined) metasComp[mes] = estado.metasCompartidas[mes];
+    descargarJSON({
+        periodo: mes,
+        transacciones: txs,
+        recurrentes: estado.recurrentes || [],
+        metasPorMes: metas,
+        metasCompartidas: metasComp,
+        usuarios: estado.usuarios || {}
+    }, `backup_${mes}.json`);
+    mostrarToast(txs.length ? `${txs.length} movimientos de ${mes} descargados en JSON` : `No hay movimientos en ${mes} (copia vacía)`, txs.length ? 'success' : 'info');
+}
+
+function exportarCSVPorAnio() {
+    const sel = document.getElementById('exportAnio');
+    const anio = sel ? sel.value : String(new Date().getFullYear());
+    if (!anio || !/^\d{4}$/.test(anio)) {
+        mostrarToast('No hay año disponible para exportar', 'danger');
+        return;
+    }
+    const lista = (estado.transacciones || []).filter(t => {
+        const c = claveMesDeTx(t);
+        return c && c.substring(0, 4) === anio;
+    });
+    descargarCSVLista(lista, `movimientos_${anio}.csv`);
+    mostrarToast(lista.length ? `${lista.length} movimientos de ${anio} descargados en CSV` : `No hay movimientos en ${anio} (archivo vacío con cabeceras)`, lista.length ? 'success' : 'info');
+}
+
+function exportarJSONPorAnio() {
+    const sel = document.getElementById('exportAnio');
+    const anio = sel ? sel.value : String(new Date().getFullYear());
+    if (!anio || !/^\d{4}$/.test(anio)) {
+        mostrarToast('No hay año disponible para exportar', 'danger');
+        return;
+    }
+    const txs = (estado.transacciones || []).filter(t => {
+        const c = claveMesDeTx(t);
+        return c && c.substring(0, 4) === anio;
+    });
+    const metas = {};
+    Object.keys(estado.metasPorMes || {}).forEach(k => {
+        if (k.substring(0, 4) === anio) metas[k] = estado.metasPorMes[k];
+    });
+    const metasComp = {};
+    Object.keys(estado.metasCompartidas || {}).forEach(k => {
+        if (k.substring(0, 4) === anio) metasComp[k] = estado.metasCompartidas[k];
+    });
+    descargarJSON({
+        periodo: anio,
+        transacciones: txs,
+        recurrentes: estado.recurrentes || [],
+        metasPorMes: metas,
+        metasCompartidas: metasComp,
+        usuarios: estado.usuarios || {}
+    }, `backup_${anio}.json`);
+    mostrarToast(txs.length ? `${txs.length} movimientos de ${anio} descargados en JSON` : `No hay movimientos en ${anio} (copia vacía)`, txs.length ? 'success' : 'info');
 }
 
 async function importarJSON(e) {
@@ -2375,6 +2565,9 @@ async function importarJSON(e) {
             if (contenido.transacciones) estado.transacciones = contenido.transacciones;
             if (contenido.recurrentes) estado.recurrentes = contenido.recurrentes;
             if (contenido.metasPorMes) estado.metasPorMes = contenido.metasPorMes;
+            if (contenido.metasCompartidas) estado.metasCompartidas = contenido.metasCompartidas;
+            if (contenido.planesAmortizacion) estado.planesAmortizacion = contenido.planesAmortizacion;
+            if (contenido.repartoPredeterminado) estado.repartoPredeterminado = contenido.repartoPredeterminado;
             if (contenido.usuarios) estado.usuarios = contenido.usuarios;
 
             guardarLocalmente();

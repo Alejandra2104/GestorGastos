@@ -50,7 +50,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="style.css?v=1.7.4">
+    <link rel="stylesheet" href="style.css?v=1.7.5">
     <style>
       /* Banner de instalación PWA + estado offline (ligero, no depende de style.css) */
       #pwaInstallBar{display:none;position:sticky;top:0;z-index:900;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;padding:10px 14px;font-size:.88rem;box-shadow:0 4px 14px rgba(124,58,237,.4)}
@@ -239,6 +239,7 @@
                     <div class="goal-inputs-inline" style="margin-top: 8px;">
                         <input type="number" step="10" min="0" id="inputMetaAhorro" class="goal-input-field" placeholder="Ej: 300" oninput="alCambiarInputMetaAhorro()">
                         <button class="btn btn-outline" style="padding: 8px 14px;" onclick="guardarMetaAhorro()">Guardar Meta</button>
+                        <button class="btn btn-outline" style="padding: 8px 14px;" onclick="eliminarMetaAhorro()" title="Quitar la meta de este mes para poder fijar una nueva">✖ Quitar</button>
                     </div>
                     <label class="checkbox-card" style="margin-top:8px;display:inline-block;cursor:pointer;">
                         <input type="checkbox" id="opMetaCompartida" onchange="toggleMetaCompartida()">
@@ -586,6 +587,27 @@
                     </label>
                 </div>
 
+                <div style="background: var(--bg-card-hover); border-radius: var(--radius-md); padding: 14px; margin-bottom: 20px;">
+                    <h3 style="font-size: .9rem; font-weight: 800; margin: 0 0 4px 0;">🗓️ Descargar por mes o por año</h3>
+                    <p style="font-size: .8rem; color: var(--text-secondary); margin: 0 0 10px 0;">Elige el periodo y descarga solo esos movimientos en Excel/CSV o JSON.</p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
+                        <div>
+                            <label class="form-label" style="font-size: .72rem; margin-bottom: 4px;" for="exportMes">Mes</label>
+                            <select id="exportMes" class="filter-select"></select>
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size: .72rem; margin-bottom: 4px;" for="exportAnio">Año</label>
+                            <select id="exportAnio" class="filter-select"></select>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                        <button class="btn btn-outline" style="padding: 7px 12px; font-size: .82rem;" onclick="exportarCSVPorMes()">📊 Mes en CSV</button>
+                        <button class="btn btn-outline" style="padding: 7px 12px; font-size: .82rem;" onclick="exportarJSONPorMes()">📁 Mes en JSON</button>
+                        <button class="btn btn-outline" style="padding: 7px 12px; font-size: .82rem;" onclick="exportarCSVPorAnio()">📊 Año en CSV</button>
+                        <button class="btn btn-outline" style="padding: 7px 12px; font-size: .82rem;" onclick="exportarJSONPorAnio()">📁 Año en JSON</button>
+                    </div>
+                </div>
+
                 <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
 
                 <div class="card-header">
@@ -605,7 +627,7 @@
                 <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
 
                 <p style="font-size:.8rem;color:var(--text-secondary);margin:0">
-                    📦 Versión <strong>1.7.4</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
+                    📦 Versión <strong>1.7.5</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
                 </p>
             </div>
         </main>
@@ -672,7 +694,7 @@
 
                 <div class="form-group">
                     <label class="checkbox-card">
-                        <input type="checkbox" id="opEsCompartido" checked>
+                        <input type="checkbox" id="opEsCompartido">
                         <span>Gasto compartido (se incluye en el reparto familiar)</span>
                     </label>
                 </div>
@@ -793,9 +815,9 @@
     </div>
 
     <!-- Script Principal de la Aplicación -->
-    <script src="app.js?v=1.7.4"></script>
+    <script src="app.js?v=1.7.5"></script>
     <script src="nube-config.js"></script>
-    <script src="nube.js?v=1.7.4"></script>
+    <script src="nube.js?v=1.7.5"></script>
     <script>
     // Lógica de instalación PWA separada del negocio (funciona en todos los navegadores)
     (function(){
