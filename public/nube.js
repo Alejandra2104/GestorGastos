@@ -95,6 +95,8 @@ function estadoActual() {
     transacciones: (typeof estado !== 'undefined' && estado.transacciones) || [],
     recurrentes: (typeof estado !== 'undefined' && estado.recurrentes) || [],
     metasPorMes: (typeof estado !== 'undefined' && estado.metasPorMes) || {},
+    // Meses quitados manualmente con "Quitar": no se les repone la meta automáticamente.
+    metasBorradas: (typeof estado !== 'undefined' && estado.metasBorradas) || {},
     // Campos extra (compatibles hacia atrás): si un hogar antiguo no los tiene,
     // se fusionan como vacíos sin romper nada. Permiten recuperar TODO al
     // reinstalar o al salir y volver a entrar con el código.
@@ -156,10 +158,11 @@ function mergeEstados(local, remoto) {
     Object.keys(fb).forEach(function (k) { out[k] = fb[k]; });
     return out;
   }
-  return {
+  var fusion = {
     transacciones: unirListas(local.transacciones, remoto.transacciones, 'tx'),
     recurrentes: unirListas(local.recurrentes, remoto.recurrentes, 'rec'),
     metasPorMes: unirMapas(local.metasPorMes, remoto.metasPorMes, 'meta'),
+    metasBorradas: unirMapas(local.metasBorradas, remoto.metasBorradas, 'metaborrada'),
     // Unión sin pérdida y compatible con hogares antiguos (que no tienen estas claves):
     // si faltan en un lado se tratan como vacías y se conserva lo del otro lado.
     metasCompartidas: unirMapas(local.metasCompartidas, remoto.metasCompartidas, 'metacomp'),
@@ -168,6 +171,15 @@ function mergeEstados(local, remoto) {
     usuarios: unirMapas(local.usuarios, remoto.usuarios, 'usr'),
     _borrados: borrados
   };
+  // Una meta quitada manualmente gana a cualquier valor heredado: se suprime
+  // del fusionado para que no resucite desde otro dispositivo o la nube.
+  // Al guardar una meta nueva se limpia su marca y vuelve a conservarse.
+  try {
+    Object.keys(fusion.metasBorradas || {}).forEach(function (m) {
+      if (fusion.metasBorradas[m] && fusion.metasPorMes) delete fusion.metasPorMes[m];
+    });
+  } catch (e) {}
+  return fusion;
 }
 
 function huella(est) {
@@ -186,6 +198,7 @@ function huella(est) {
     t: normList(est.transacciones),
     r: normList(est.recurrentes),
     m: normMap(est.metasPorMes),
+    mb: normMap(est.metasBorradas),
     mc: normMap(est.metasCompartidas),
     p: normList(est.planesAmortizacion),
     rp: normMap(est.repartoPredeterminado),
@@ -199,6 +212,7 @@ function aplicarEstado(est) {
     estado.transacciones = est.transacciones || [];
     estado.recurrentes = est.recurrentes || [];
     estado.metasPorMes = est.metasPorMes || {};
+    if (est.metasBorradas && typeof est.metasBorradas === 'object') estado.metasBorradas = est.metasBorradas;
     // Restaurar también estos campos si vienen de la nube; si el hogar es
     // antiguo y no los trae, se conservan los locales (no se pisan con vacío).
     if (est.metasCompartidas && typeof est.metasCompartidas === 'object') estado.metasCompartidas = est.metasCompartidas;

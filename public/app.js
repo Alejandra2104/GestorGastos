@@ -85,6 +85,7 @@ const estado = {
     transacciones: [],
     recurrentes: [],
     metasPorMes: {},
+    metasBorradas: {},
     metasCompartidas: {},
     planesAmortizacion: [],
     repartoPredeterminado: {},
@@ -112,6 +113,7 @@ function guardarLocalmente() {
             transacciones: estado.transacciones,
             recurrentes: estado.recurrentes,
             metasPorMes: estado.metasPorMes,
+            metasBorradas: estado.metasBorradas || {},
             metasCompartidas: estado.metasCompartidas || {},
             planesAmortizacion: estado.planesAmortizacion || [],
             repartoPredeterminado: estado.repartoPredeterminado || {},
@@ -133,6 +135,7 @@ function cargarLocalmente() {
             if (Array.isArray(parsed.transacciones)) estado.transacciones = parsed.transacciones;
             if (Array.isArray(parsed.recurrentes)) estado.recurrentes = parsed.recurrentes;
             if (parsed.metasPorMes && typeof parsed.metasPorMes === 'object') estado.metasPorMes = parsed.metasPorMes;
+            if (parsed.metasBorradas && typeof parsed.metasBorradas === 'object') estado.metasBorradas = parsed.metasBorradas;
             if (parsed.metasCompartidas && typeof parsed.metasCompartidas === 'object') estado.metasCompartidas = parsed.metasCompartidas;
             if (Array.isArray(parsed.planesAmortizacion)) estado.planesAmortizacion = parsed.planesAmortizacion;
             if (parsed.repartoPredeterminado && typeof parsed.repartoPredeterminado === 'object') estado.repartoPredeterminado = parsed.repartoPredeterminado;
@@ -670,8 +673,10 @@ function activarProrrogaPlan(plan) {
     const cuotaNueva = parseFloat((plan.saldoPendiente / mesesTotales).toFixed(2));
     if (cuotaNueva > 0) plan.cuotaMensual = cuotaNueva;
 
-    // Actualizar bases en los meses restantes
+    // Actualizar bases en los meses restantes (respetando los meses que el
+    // usuario quitó manualmente: no se les repone la base automáticamente)
     plan.mesesLista.forEach(m => {
+        if (estado.metasBorradas && estado.metasBorradas[m]) return;
         if (!estado.metasPorMes[m] || estado.metasPorMes[m] <= plan.cuotaMensual) {
             estado.metasPorMes[m] = plan.cuotaMensual;
         }
@@ -782,8 +787,9 @@ function renderMetaAhorro() {
             document.getElementById('lblBaseAmortTexto').innerHTML = 
                 `Base obligatoria de este mes (amortización): <strong>${planActivo.cuotaMensual.toFixed(2)} €</strong>`;
             
-            // Si el mes aún no tenía meta fijada, se establece la cuota de amortización como base predeterminada
-            if (estado.metasPorMes[estado.mesSeleccionado] === undefined) {
+            // Si el mes aún no tenía meta fijada, se establece la cuota de amortización como base predeterminada,
+            // salvo que el usuario la hubiera quitado manualmente (entonces no se repone sola)
+            if (estado.metasPorMes[estado.mesSeleccionado] === undefined && !(estado.metasBorradas && estado.metasBorradas[estado.mesSeleccionado])) {
                 estado.metasPorMes[estado.mesSeleccionado] = planActivo.cuotaMensual;
                 guardarLocalmente();
             }
@@ -1024,8 +1030,9 @@ async function aplicarPlanProrrateo() {
         const clave = `${cursorAnio}-${String(cursorMes).padStart(2, '0')}`;
         mesesLista.push(clave);
         
-        // Regla: el mes siguiente tiene de base la amortización del mes anterior (no base anterior + añadidos)
-        if (!estado.metasPorMes[clave] || estado.metasPorMes[clave] <= cuotaExtra) {
+        // Regla: el mes siguiente tiene de base la amortización del mes anterior (no base anterior + añadidos).
+        // No se repone base en meses que el usuario quitó manualmente.
+        if (!(estado.metasBorradas && estado.metasBorradas[clave]) && (!estado.metasPorMes[clave] || estado.metasPorMes[clave] <= cuotaExtra)) {
             estado.metasPorMes[clave] = cuotaExtra;
         }
     }
@@ -1064,9 +1071,14 @@ async function guardarMetaAhorro() {
         return;
     }
 
-    // La meta siempre se puede cambiar: sobrescribe el valor anterior del mes.
+    // La meta siempre se puede cambiar: sobrescribe el valor anterior del mes
+    // y anula la marca de "quitada manualmente" para ese mes.
     estado.metasPorMes[estado.mesSeleccionado] = nuevaMeta;
+    try { if (estado.metasBorradas) delete estado.metasBorradas[estado.mesSeleccionado]; } catch (e) {}
     guardarLocalmente();
+    // Subida forzada para que el nuevo valor (y la limpieza de la marca)
+    // lleguen a la nube de forma atómica.
+    try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
     api('/api/meta', 'POST', { mes: estado.mesSeleccionado, meta: nuevaMeta }).catch(() => {});
     mostrarToast(`Meta de ahorro guardada: ${nuevaMeta.toFixed(2)} € (puedes cambiarla cuando quieras)`, 'success');
     renderMetaAhorro();
@@ -1081,9 +1093,21 @@ function eliminarMetaAhorro() {
         return;
     }
     delete estado.metasPorMes[estado.mesSeleccionado];
+    // Sin meta no hay reparto compartido de ese mes: se limpia también para
+    // que la casilla "Meta compartida" no quede marcada en vacío.
+    try { if (estado.metasCompartidas) delete estado.metasCompartidas[estado.mesSeleccionado]; } catch (e) {}
+    // Marcar el mes como quitado manualmente para que ni el plan de
+    // amortización ni la nube vuelvan a reponer la meta automáticamente.
+    try {
+        if (!estado.metasBorradas || typeof estado.metasBorradas !== 'object') estado.metasBorradas = {};
+        estado.metasBorradas[estado.mesSeleccionado] = true;
+    } catch (e) {}
     const inputExtra = document.getElementById('inputAporteExtraMeta');
     if (inputExtra) inputExtra.value = '';
     guardarLocalmente();
+    // Subida forzada (reemplazo) para que el borrado llegue a la nube y no
+    // resucite al fusionar con los datos antiguos del hogar.
+    try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
     mostrarToast('Meta eliminada: ya puedes fijar un nuevo importe', 'info');
     renderMetaAhorro();
 }
@@ -2348,6 +2372,7 @@ function exportarJSON() {
         transacciones: estado.transacciones,
         recurrentes: estado.recurrentes,
         metasPorMes: estado.metasPorMes,
+        metasBorradas: estado.metasBorradas || {},
         metasCompartidas: estado.metasCompartidas || {},
         planesAmortizacion: estado.planesAmortizacion || [],
         repartoPredeterminado: estado.repartoPredeterminado || {},
@@ -2565,6 +2590,7 @@ async function importarJSON(e) {
             if (contenido.transacciones) estado.transacciones = contenido.transacciones;
             if (contenido.recurrentes) estado.recurrentes = contenido.recurrentes;
             if (contenido.metasPorMes) estado.metasPorMes = contenido.metasPorMes;
+            if (contenido.metasBorradas) estado.metasBorradas = contenido.metasBorradas;
             if (contenido.metasCompartidas) estado.metasCompartidas = contenido.metasCompartidas;
             if (contenido.planesAmortizacion) estado.planesAmortizacion = contenido.planesAmortizacion;
             if (contenido.repartoPredeterminado) estado.repartoPredeterminado = contenido.repartoPredeterminado;
@@ -2589,6 +2615,7 @@ async function restablecerDatosSimulados() {
         estado.transacciones = JSON.parse(JSON.stringify(DATOS_DEMO.transacciones));
         estado.recurrentes = JSON.parse(JSON.stringify(DATOS_DEMO.recurrentes));
         estado.metasPorMes = JSON.parse(JSON.stringify(DATOS_DEMO.metasPorMes));
+        estado.metasBorradas = {};
         estado.usuarios = JSON.parse(JSON.stringify(DATOS_DEMO.usuarios));
         guardarLocalmente();
         try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
@@ -2609,6 +2636,7 @@ async function restablecerDatosA0() {
         estado.transacciones = [];
         estado.recurrentes = [];
         estado.metasPorMes = {};
+        estado.metasBorradas = {};
         estado.usuarios = {};
         guardarLocalmente();
         try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
