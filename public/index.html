@@ -50,7 +50,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="style.css?v=1.7.6">
+    <link rel="stylesheet" href="style.css?v=1.7.7">
     <style>
       /* Banner de instalación PWA + estado offline (ligero, no depende de style.css) */
       #pwaInstallBar{display:none;position:sticky;top:0;z-index:900;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;padding:10px 14px;font-size:.88rem;box-shadow:0 4px 14px rgba(124,58,237,.4)}
@@ -608,6 +608,23 @@
                     </div>
                 </div>
 
+                <div style="background: var(--bg-card-hover); border-radius: var(--radius-md); padding: 14px; margin-bottom: 20px;">
+                    <h3 style="font-size: .9rem; font-weight: 800; margin: 0 0 4px 0;">📲 Mi copia personal (por teléfono + PIN)</h3>
+                    <p style="font-size: .8rem; color: var(--text-secondary); margin: 0 0 10px 0;">Marca "Es mi teléfono" en un miembro para guardar tu copia automáticamente. Si cambias o borras la app, recupérala aquí con tu número y tu PIN, sin necesidad de hogar.</p>
+                    <p id="respaldoPersonalEstado" style="font-size: .82rem; margin: 0 0 10px 0;">—</p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;">
+                        <div>
+                            <label class="form-label" style="font-size: .72rem; margin-bottom: 4px;" for="recTel">Tu teléfono</label>
+                            <input type="tel" id="recTel" class="form-control" placeholder="Ej: 600123456" style="padding: 9px 12px; font-size: .88rem;">
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size: .72rem; margin-bottom: 4px;" for="recPin">Tu PIN</label>
+                            <input type="password" id="recPin" class="form-control" inputmode="numeric" placeholder="4-8 dígitos" style="padding: 9px 12px; font-size: .88rem; max-width: 140px;">
+                        </div>
+                        <button class="btn btn-outline" style="padding: 9px 14px; font-size: .85rem;" onclick="recuperarRespaldoPersonal()">📥 Recuperar mis datos</button>
+                    </div>
+                </div>
+
                 <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
 
                 <div class="card-header">
@@ -627,7 +644,7 @@
                 <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
 
                 <p style="font-size:.8rem;color:var(--text-secondary);margin:0">
-                    📦 Versión <strong>1.7.6</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
+                    📦 Versión <strong>1.7.7</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
                 </p>
             </div>
         </main>
@@ -815,9 +832,9 @@
     </div>
 
     <!-- Script Principal de la Aplicación -->
-    <script src="app.js?v=1.7.6"></script>
+    <script src="app.js?v=1.7.7"></script>
     <script src="nube-config.js"></script>
-    <script src="nube.js?v=1.7.6"></script>
+    <script src="nube.js?v=1.7.7"></script>
     <script>
     // Lógica de instalación PWA separada del negocio (funciona en todos los navegadores)
     (function(){

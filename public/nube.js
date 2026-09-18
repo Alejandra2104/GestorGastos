@@ -428,6 +428,15 @@ async function unirseHogar() {
   }
 }
 
+function desvincularHogarSilencioso() {
+  // Igual que desvincularHogar pero sin preguntar ni tocar la nube:
+  // se usa al restablecer el dispositivo para no borrar la copia del hogar.
+  guardarVinculo(null);
+  try { if (rtCanal && rtCanal.unsubscribe) rtCanal.unsubscribe(); } catch (e) {}
+  rtCanal = null;
+  refrescarHogarUI();
+}
+
 function desvincularHogar() {
   var v = leerVinculo();
   if (!v) return;
@@ -588,6 +597,7 @@ try {
   __g.crearHogar = crearHogar;
   __g.unirseHogar = unirseHogar;
   __g.desvincularHogar = desvincularHogar;
+  __g.desvincularHogarSilencioso = desvincularHogarSilencioso;
   __g.sincronizarAhora = sincronizarAhora;
   __g.copiarCodigoHogar = copiarCodigoHogar;
   __g.probarConexionNube = probarConexionNube;

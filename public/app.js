@@ -91,6 +91,10 @@ const estado = {
     repartoPredeterminado: {},
     usuarios: {},
     _borrados: {},
+    // Respaldo personal por teléfono + PIN (solo de este dispositivo: no se
+    // sincroniza con el hogar para no mezclar identidades entre miembros).
+    miTelefono: null,
+    respaldoPIN: null,
     mesSeleccionado: claveMesActual(),
     mesCalendario: calendarioMesActual(),
     tabActiva: "resumen",
@@ -118,13 +122,16 @@ function guardarLocalmente() {
             planesAmortizacion: estado.planesAmortizacion || [],
             repartoPredeterminado: estado.repartoPredeterminado || {},
             usuarios: estado.usuarios,
-            _borrados: estado._borrados || {}
+            _borrados: estado._borrados || {},
+            miTelefono: estado.miTelefono || null,
+            respaldoPIN: estado.respaldoPIN || null
         };
         localStorage.setItem('gestor_gastos_db', JSON.stringify(payload));
     } catch (e) {
         console.warn("No se pudo guardar en localStorage:", e);
     }
     try { if (typeof programarSubidaNube === 'function' && (typeof window === 'undefined' || !window.__NUBE_SUPRIMIR__)) programarSubidaNube(); } catch (e) {}
+    try { if (typeof programarRespaldoPersonal === 'function') programarRespaldoPersonal(); } catch (e) {}
 }
 
 function cargarLocalmente() {
@@ -141,6 +148,8 @@ function cargarLocalmente() {
             if (parsed.repartoPredeterminado && typeof parsed.repartoPredeterminado === 'object') estado.repartoPredeterminado = parsed.repartoPredeterminado;
             if (parsed.usuarios && typeof parsed.usuarios === 'object') estado.usuarios = parsed.usuarios;
             if (parsed._borrados && typeof parsed._borrados === 'object') estado._borrados = parsed._borrados;
+            if (typeof parsed.miTelefono === 'string' && parsed.miTelefono) estado.miTelefono = parsed.miTelefono;
+            if (typeof parsed.respaldoPIN === 'string' && parsed.respaldoPIN) estado.respaldoPIN = parsed.respaldoPIN;
             return true;
         }
     } catch (e) {
@@ -528,6 +537,7 @@ function actualizarVistas() {
     renderCalendario();
     renderRecurrentes();
     renderSplit();
+    try { if (typeof refrescarRespaldoPersonalUI === 'function') refrescarRespaldoPersonalUI(); } catch (e) {}
 }
 
 // ==========================================================================
@@ -1929,11 +1939,15 @@ function renderSplit() {
     const dirContainer = document.getElementById('usersDirectoryContainer');
     dirContainer.innerHTML = '';
     Object.entries(estado.usuarios).forEach(([tel, nombre]) => {
+        const esMio = estado.miTelefono && String(estado.miTelefono) === String(tel);
         dirContainer.innerHTML += `
             <div style="display: flex; gap: 10px; align-items: center; background: var(--bg-card-hover); padding: 10px 14px; border-radius: var(--radius-md); flex-wrap: wrap;">
                 <span style="font-weight: 700; color: var(--primary); min-width: 120px;">📱 ${tel}</span>
                 <input type="text" value="${nombre}" id="nameInput_${tel}" class="form-control" style="flex: 1; min-width: 140px; padding: 6px 10px; font-size: 0.88rem;" placeholder="Nombre...">
-                <div style="display: flex; gap: 6px;">
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    ${esMio
+                        ? '<span class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem; border-color: var(--success); color: var(--success-text);">★ Mi teléfono</span><button class="btn btn-outline" style="padding: 6px 10px; font-size: 0.8rem;" title="Dejar de usar como mi teléfono" onclick="quitarMiTelefono()">✖</button>'
+                        : `<button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" title="Usar como mi teléfono para el respaldo personal" onclick="marcarMiTelefono('${tel}')">📲 Es mi teléfono</button>`}
                     <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.8rem;" onclick="guardarNombreUsuario('${tel}')">💾 Guardar</button>
                     <button class="btn btn-outline" style="padding: 6px 10px; font-size: 0.8rem; color: var(--danger); border-color: var(--danger-light);" title="Eliminar miembro" onclick="eliminarUsuario('${tel}')">🗑️</button>
                 </div>
@@ -2376,7 +2390,9 @@ function exportarJSON() {
         metasCompartidas: estado.metasCompartidas || {},
         planesAmortizacion: estado.planesAmortizacion || [],
         repartoPredeterminado: estado.repartoPredeterminado || {},
-        usuarios: estado.usuarios
+        usuarios: estado.usuarios,
+        miTelefono: estado.miTelefono || null,
+        respaldoPIN: estado.respaldoPIN || null
     }, `gestor_gastos_backup_${new Date().toISOString().substring(0, 10)}.json`);
     mostrarToast('Copia de seguridad JSON descargada', 'info');
 }
@@ -2595,6 +2611,8 @@ async function importarJSON(e) {
             if (contenido.planesAmortizacion) estado.planesAmortizacion = contenido.planesAmortizacion;
             if (contenido.repartoPredeterminado) estado.repartoPredeterminado = contenido.repartoPredeterminado;
             if (contenido.usuarios) estado.usuarios = contenido.usuarios;
+            if (typeof contenido.miTelefono === 'string' && contenido.miTelefono) estado.miTelefono = contenido.miTelefono;
+            if (typeof contenido.respaldoPIN === 'string' && contenido.respaldoPIN) estado.respaldoPIN = contenido.respaldoPIN;
 
             guardarLocalmente();
             try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
@@ -2632,20 +2650,280 @@ async function restablecerDatosSimulados() {
 // ==========================================================================
 
 async function restablecerDatosA0() {
-    if (confirm('¿Estás seguro que quieres restablecer todos los datos a 0?\n\nEsto borrará las transacciones, recurrentes, metas y usuarios, dejando la aplicación en su estado inicial vacío. Esta acción no se puede deshacer.')) {
-        estado.transacciones = [];
-        estado.recurrentes = [];
-        estado.metasPorMes = {};
-        estado.metasBorradas = {};
-        estado.usuarios = {};
+    if (!confirm('¿Estás seguro que quieres restablecer todos los datos a 0?\n\nSe borrará TODO lo de este dispositivo (movimientos, fijos, metas, miembros y números).\n\nNO se toca la nube del hogar (los demás siguen con acceso) NI tu copia personal por teléfono (podrás recuperarla con tu número + PIN).')) {
+        return;
+    }
+    // Desvincular primero y en silencio: así el vaciado local no puede subirse
+    // a ninguna nube ni borrar la copia del hogar ni la personal.
+    try { if (typeof desvincularHogarSilencioso === 'function') desvincularHogarSilencioso(); } catch (e) {}
+    try { if (timerRespaldoPersonal) clearTimeout(timerRespaldoPersonal); } catch (e) {}
+    try { timerRespaldoPersonal = null; } catch (e) {}
+    estado.transacciones = [];
+    estado.recurrentes = [];
+    estado.metasPorMes = {};
+    estado.metasBorradas = {};
+    estado.metasCompartidas = {};
+    estado.planesAmortizacion = [];
+    estado.repartoPredeterminado = {};
+    estado.usuarios = {};
+    estado._borrados = {};
+    estado.miTelefono = null;
+    estado.respaldoPIN = null;
+    try { localStorage.removeItem(LS_RESPALDO_TS); } catch (e) {}
+    guardarLocalmente();
+    try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
+    api('/api/simular', 'POST').catch(() => {});
+    mostrarToast('Dispositivo restablecido a 0. Tu copia personal y la nube del hogar siguen a salvo.', 'info');
+    inicializarSelectorMeses();
+    actualizarSelectUsuarios();
+    actualizarVistas();
+}
+
+// ==========================================================================
+// Respaldo personal por teléfono + PIN (independiente del hogar compartido)
+// - Requiere haber ejecutado el SQL de `respaldos_personales` en Supabase.
+// - Sin vincular ni configurar: no hace nada, la app sigue 100% local.
+// - La copia personal sobrevive al "Restablecer a 0" (si no, no se podría
+//   recuperar solo con el teléfono).
+// ==========================================================================
+
+const LS_RESPALDO_TS = 'gestor_respaldo_personal_ts';
+let timerRespaldoPersonal = null;
+
+function normalizarTelefono(tel) {
+    try { return String(tel || '').replace(/\s+/g, ''); } catch (e) { return ''; }
+}
+
+function respaldoPersonalConfigurado() {
+    try {
+        const c = (typeof window !== 'undefined' && window.NUBE_CONFIG) || {};
+        return !!(c.SUPABASE_URL && c.SUPABASE_KEY);
+    } catch (e) { return false; }
+}
+
+function respaldoPersonalActivo() {
+    try {
+        if (!respaldoPersonalConfigurado()) return false;
+        if (!estado.miTelefono || !estado.respaldoPIN) return false;
+        if (typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' && !navigator.onLine) return false;
+        return true;
+    } catch (e) { return false; }
+}
+
+async function respaldoPersonalRPC(nombre, params) {
+    const c = window.NUBE_CONFIG;
+    if (!c || !c.SUPABASE_URL || !c.SUPABASE_KEY) throw new Error('respaldo sin configurar');
+    let ctrl = null;
+    let t = null;
+    try {
+        if (typeof AbortController !== 'undefined') {
+            ctrl = new AbortController();
+            t = setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, 12000);
+        }
+        const res = await fetch(c.SUPABASE_URL + '/rest/v1/rpc/' + nombre, {
+            method: 'POST',
+            headers: {
+                'apikey': c.SUPABASE_KEY,
+                'Authorization': 'Bearer ' + c.SUPABASE_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(params || {}),
+            signal: ctrl ? ctrl.signal : undefined
+        });
+        if (t) clearTimeout(t);
+        const texto = await res.text().catch(() => '');
+        if (!res.ok) {
+            let msg = String(texto || '').slice(0, 200);
+            try {
+                const j = JSON.parse(texto);
+                if (j && j.message) msg = String(j.message).slice(0, 200);
+            } catch (e) {}
+            throw new Error(msg || ('respaldo ' + res.status));
+        }
+        if (!texto) return null;
+        try { return JSON.parse(texto); } catch (e) { return texto; }
+    } catch (e) {
+        if (t) clearTimeout(t);
+        throw e;
+    }
+}
+
+function mensajeRespaldo(e) {
+    const m = String((e && e.message) || e || 'error');
+    if (/PIN incorrecto/.test(m)) return 'PIN incorrecto para ese teléfono.';
+    if (/Demasiados intentos/.test(m)) return 'Demasiados intentos: espera unos minutos.';
+    if (/PIN debe tener/.test(m)) return 'El PIN debe tener entre 4 y 8 dígitos.';
+    if (/Could not find the function|404/.test(m)) return 'falta ejecutar el SQL de respaldos en Supabase';
+    if (/abort|Failed to fetch|NetworkError|Load failed/i.test(m)) return 'sin conexión a internet';
+    return m.slice(0, 120);
+}
+
+function construirSnapshotLocal() {
+    return {
+        transacciones: estado.transacciones || [],
+        recurrentes: estado.recurrentes || [],
+        metasPorMes: estado.metasPorMes || {},
+        metasBorradas: estado.metasBorradas || {},
+        metasCompartidas: estado.metasCompartidas || {},
+        planesAmortizacion: estado.planesAmortizacion || [],
+        repartoPredeterminado: estado.repartoPredeterminado || {},
+        usuarios: estado.usuarios || {},
+        _borrados: estado._borrados || {}
+    };
+}
+
+function programarRespaldoPersonal() {
+    try {
+        if (!respaldoPersonalActivo()) return;
+        if (timerRespaldoPersonal) clearTimeout(timerRespaldoPersonal);
+        timerRespaldoPersonal = setTimeout(function () { subidaRespaldoPersonal(false); }, 2000);
+    } catch (e) {}
+}
+
+function obtenerTSRespaldoPersonal() {
+    try {
+        const v = localStorage.getItem(LS_RESPALDO_TS);
+        const n = parseInt(v, 10);
+        return isNaN(n) ? null : n;
+    } catch (e) { return null; }
+}
+
+async function subidaRespaldoPersonal(manual) {
+    timerRespaldoPersonal = null;
+    if (!respaldoPersonalActivo()) return false;
+    if (typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' && !navigator.onLine) {
+        if (manual) mostrarToast('Sin conexión a internet.', 'danger');
+        return false;
+    }
+    try {
+        await respaldoPersonalRPC('guardar_respaldo', {
+            p_telefono: estado.miTelefono,
+            p_pin: estado.respaldoPIN,
+            p_datos: construirSnapshotLocal()
+        });
+        try { localStorage.setItem(LS_RESPALDO_TS, String(Date.now())); } catch (e) {}
+        try { refrescarRespaldoPersonalUI(); } catch (e) {}
+        if (manual) mostrarToast('Copia personal guardada en la nube.', 'success');
+        return true;
+    } catch (e) {
+        if (manual) mostrarToast('No se pudo guardar la copia: ' + mensajeRespaldo(e), 'danger');
+        return false;
+    }
+}
+
+async function marcarMiTelefono(tel) {
+    tel = normalizarTelefono(tel);
+    if (!tel) return;
+    const nombre = (estado.usuarios && estado.usuarios[tel]) || tel;
+    if (estado.miTelefono === tel && estado.respaldoPIN) {
+        mostrarToast('Este ya es tu teléfono: el respaldo personal está activo.', 'info');
+        return;
+    }
+    if (!respaldoPersonalConfigurado()) {
+        mostrarToast('Respaldo sin configurar: falta nube-config.js.', 'danger');
+        return;
+    }
+    if (typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' && !navigator.onLine) {
+        mostrarToast('Sin conexión a internet.', 'danger');
+        return;
+    }
+    const pin = prompt('PIN de 4 a 8 dígitos para tu copia personal de "' + nombre + '".\nSi es la primera vez, este PIN quedará fijado. Lo necesitarás para recuperar tus datos.');
+    if (pin === null) return;
+    const pinLimpio = String(pin).trim();
+    if (!/^\d{4,8}$/.test(pinLimpio)) {
+        mostrarToast('El PIN debe tener entre 4 y 8 dígitos.', 'danger');
+        return;
+    }
+    mostrarToast('Verificando tu copia personal…', 'info');
+    try {
+        // Si el teléfono ya tiene copia, exige su PIN; si no, devuelve null y se creará al subir.
+        await respaldoPersonalRPC('obtener_respaldo', { p_telefono: tel, p_pin: pinLimpio });
+        estado.miTelefono = tel;
+        estado.respaldoPIN = pinLimpio;
+        guardarLocalmente();
+        const ok = await subidaRespaldoPersonal(true);
+        if (ok) mostrarToast('Respaldo personal activado para "' + nombre + '".', 'success');
+        actualizarVistas();
+    } catch (e) {
+        mostrarToast('No se pudo activar: ' + mensajeRespaldo(e), 'danger');
+    }
+}
+
+function quitarMiTelefono() {
+    if (!estado.miTelefono) return;
+    if (!confirm('¿Desactivar el respaldo personal en este dispositivo?\n\nTu copia en la nube se conserva y podrás recuperarla con tu teléfono + PIN.')) {
+        return;
+    }
+    estado.miTelefono = null;
+    estado.respaldoPIN = null;
+    try { localStorage.removeItem(LS_RESPALDO_TS); } catch (e) {}
+    if (timerRespaldoPersonal) { try { clearTimeout(timerRespaldoPersonal); } catch (e) {} timerRespaldoPersonal = null; }
+    guardarLocalmente();
+    mostrarToast('Respaldo personal desactivado en este dispositivo.', 'info');
+    actualizarVistas();
+}
+
+async function recuperarRespaldoPersonal() {
+    let tel = '';
+    let pin = '';
+    try {
+        tel = normalizarTelefono(document.getElementById('recTel').value);
+        pin = String(document.getElementById('recPin').value || '').trim();
+    } catch (e) {}
+    if (!tel || !pin) {
+        mostrarToast('Indica tu teléfono y tu PIN.', 'danger');
+        return;
+    }
+    if (!respaldoPersonalConfigurado()) {
+        mostrarToast('Respaldo sin configurar: falta nube-config.js.', 'danger');
+        return;
+    }
+    mostrarToast('Buscando tu copia personal…', 'info');
+    try {
+        const datos = await respaldoPersonalRPC('obtener_respaldo', { p_telefono: tel, p_pin: pin });
+        if (!datos) {
+            mostrarToast('No hay ninguna copia guardada para ese teléfono.', 'info');
+            return;
+        }
+        const tieneLocal = ((estado.transacciones || []).length > 0) || (Object.keys(estado.usuarios || {}).length > 0);
+        if (tieneLocal && !confirm('Se ha encontrado tu copia personal.\n\n¿Reemplazar los datos de este dispositivo con tu copia?')) {
+            return;
+        }
+        if (Array.isArray(datos.transacciones)) estado.transacciones = datos.transacciones;
+        if (Array.isArray(datos.recurrentes)) estado.recurrentes = datos.recurrentes;
+        if (datos.metasPorMes && typeof datos.metasPorMes === 'object') estado.metasPorMes = datos.metasPorMes;
+        if (datos.metasBorradas && typeof datos.metasBorradas === 'object') estado.metasBorradas = datos.metasBorradas;
+        if (datos.metasCompartidas && typeof datos.metasCompartidas === 'object') estado.metasCompartidas = datos.metasCompartidas;
+        if (Array.isArray(datos.planesAmortizacion)) estado.planesAmortizacion = datos.planesAmortizacion;
+        if (datos.repartoPredeterminado && typeof datos.repartoPredeterminado === 'object') estado.repartoPredeterminado = datos.repartoPredeterminado;
+        if (datos.usuarios && typeof datos.usuarios === 'object') estado.usuarios = datos.usuarios;
+        if (datos._borrados && typeof datos._borrados === 'object') estado._borrados = datos._borrados;
+        estado.miTelefono = tel;
+        estado.respaldoPIN = pin;
         guardarLocalmente();
         try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
-        api('/api/simular', 'POST').catch(() => {});
-        mostrarToast('Todos los datos restablecidos a 0', 'info');
         inicializarSelectorMeses();
         actualizarSelectUsuarios();
         actualizarVistas();
+        mostrarToast('¡Tus datos personales han sido recuperados!', 'success');
+    } catch (e) {
+        mostrarToast('No se pudo recuperar: ' + mensajeRespaldo(e), 'danger');
     }
+}
+
+function refrescarRespaldoPersonalUI() {
+    try {
+        const el = document.getElementById('respaldoPersonalEstado');
+        if (!el) return;
+        if (estado.miTelefono && estado.respaldoPIN) {
+            const nombre = (estado.usuarios && estado.usuarios[estado.miTelefono]) || estado.miTelefono;
+            const ts = obtenerTSRespaldoPersonal();
+            const cuando = ts ? new Date(ts).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : 'pendiente de primera subida';
+            el.innerHTML = '✅ Respaldo activo para <strong>' + nombre + ' (' + estado.miTelefono + ')</strong> · última copia: ' + cuando + '.';
+        } else {
+            el.textContent = 'Sin activar: marca "Es mi teléfono" en un miembro para empezar.';
+        }
+    } catch (e) {}
 }
 
 // ==========================================================================
