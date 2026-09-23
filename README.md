@@ -20,7 +20,7 @@ Este MVP es una app familiar compartida, instalable y offline, que permite apunt
 * **Gastos fijos:** conceptos recurrentes (hipoteca, nóminas, suministros, suscripciones) con día del mes.
 * **Reparto familiar:** cálculo automático de saldos compartidos por teléfono/miembro.
 * **Metas de ahorro:** meta editable por mes, reparto proporcional por % entre miembros (siempre suma 100 %), barra de progreso, aviso de déficit.
-* **Plan de amortización:** si un mes no se ahorra, el siguiente pone de base `lo que falta + extra voluntario`. Recuperación en 2, 4, 6, 8 o 12 meses con opción de saldar antes.
+* **Plan de amortización:** si un mes no se ahorra, el siguiente pone de base `lo que falta + extra voluntario`. Recuperación en 2, 4, 6, 8 o 12 meses con opción de saldar antes. Nota: quitar la meta de un mes no cancela su plan (la deuda persiste); el plan solo desaparece con `Saldar Deuda Anticipadamente`. Si un mes ya tiene meta propia mayor que la cuota, se respeta la meta del usuario.
 * **Alerta por categoría:** detecta cuando se gasta más en una categoría respecto al mes anterior.
 * **Hogar compartido en la nube (Supabase):** vincular teléfonos con un código (`public/nube.js` + `public/nube-config.js`, funciones `obtener_hogar` / `guardar_hogar`). Sin vínculo, todo sigue local.
 * **Copia de seguridad:** descarga/importación JSON, exportar a Excel/CSV por mes y por año, y copia personal en la nube por teléfono + PIN (`guardar_respaldo` / `obtener_respaldo` en `public/app.js`) que sobrevive al reset del dispositivo.

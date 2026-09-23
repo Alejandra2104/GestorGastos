@@ -91,6 +91,10 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * Pedido por Alejandra: los datos de prueba estaban bajo la lógica anterior (sin `efectivo/tarjeta` y sin ejemplo de déficit).
 * Cambio: `formaPago` añadido a las 32 operaciones demo en `public/app.js` (`DATOS_DEMO`) y en `server.js` (`/api/simular`), mismo contenido en ambos. Nueva operación `id 132` (reforma baño 2.800 € en agosto) para que agosto dé balance −497,20 € frente a meta 300 € → déficit 797,20 € y se pueda probar el plan de recuperación con arrastre de base al mes siguiente. Septiembre queda sin meta preset en la demo para que la cuota del plan se aplique como base sin depender de los meses elegidos (antes la meta 350 bloqueaba cuotas menores). Verificado con `node --check` y cálculo de balance.
 
+### S7 — Aclaraciones 23/09/2026 (sin cambios de código, decisión de la autora)
+* **Quitar meta ≠ cancelar plan (diseño confirmado):** `eliminarMetaAhorro` (`public/app.js:1098`) solo borra la meta del mes; el plan vive en `planesAmortizacion` y `obtenerPlanAmortizacionActivo` (`:648`) lo sigue mostrando en los meses de cuota hasta `Saldar Deuda Anticipadamente` (`:728`). Se deja así a propósito.
+* **Errores detectados probando:** demo sin `formaPago` (filtros/etiquetas en blanco), demo sin déficit posible (las nóminas fijas de 4.000 €/mes siempre daban superávit), preset de septiembre (350 €) que bloqueaba cuotas menores del plan (reproducido: con cuota 132,87 € no se aplicaba; sin preset sí). Los tres se corrigieron solo con datos demo.
+
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
 * **IA:** generó ~90 % del código base, PWA, temas, CRUD, gráficos, Supabase, exports.
