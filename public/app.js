@@ -1294,42 +1294,45 @@ function guardarMetaCompartida() {
 
 function renderSpikeBanner() {
     const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
-    const opsActuales = obtenerOperacionesMes(anio, mesNum);
 
     let mesAnt = mesNum - 1;
     let anioAnt = anio;
     if (mesAnt === 0) { mesAnt = 12; anioAnt--; }
-    const opsAnteriores = obtenerOperacionesMes(anioAnt, mesAnt);
+    const claveActual = anio + '-' + String(mesNum).padStart(2, '0');
+    const claveAnt = anioAnt + '-' + String(mesAnt).padStart(2, '0');
 
+    // Solo movimientos reales de gasto: ni ingresos ni fijos entran en este banner.
     const gastosCatActual = {};
-    opsActuales.forEach(op => {
-        if (op.tipo === 'gasto') {
-            gastosCatActual[op.categoria] = (gastosCatActual[op.categoria] || 0) + op.cantidad;
-        }
-    });
-
     const gastosCatAnterior = {};
-    opsAnteriores.forEach(op => {
-        if (op.tipo === 'gasto') {
-            gastosCatAnterior[op.categoria] = (gastosCatAnterior[op.categoria] || 0) + op.cantidad;
+    let hayGastoPrev = false;
+    estado.transacciones.forEach(t => {
+        if (!t || t.tipo !== 'gasto' || typeof t.fecha !== 'string' || t.fecha.length < 7) return;
+        const clave = t.fecha.substring(0, 7);
+        if (clave === claveActual) {
+            gastosCatActual[t.categoria] = (gastosCatActual[t.categoria] || 0) + t.cantidad;
+        } else if (clave === claveAnt) {
+            gastosCatAnterior[t.categoria] = (gastosCatAnterior[t.categoria] || 0) + t.cantidad;
+            hayGastoPrev = true;
         }
     });
 
-    const todasCats = new Set([...Object.keys(gastosCatActual), ...Object.keys(gastosCatAnterior)]);
+    const bannerSpike = document.getElementById('bannerSpike');
+    // Sin gastos el mes anterior no hay con qué comparar: no sale nada.
+    if (!hayGastoPrev) {
+        bannerSpike.style.display = 'none';
+        return;
+    }
+
     const cambios = [];
-
-    todasCats.forEach(cat => {
-        const gastado = gastosCatActual[cat] || 0;
-        const gastadoAnt = gastosCatAnterior[cat] || 0;
-        const diff = gastado - gastadoAnt;
+    for (const [cat, gastado] of Object.entries(gastosCatActual)) {
+        const diff = gastado - (gastosCatAnterior[cat] || 0);
         if (diff >= 0.01) {
-            cambios.push({ cat, gastado, gastadoAnt, diff });
+            cambios.push({ cat, diff });
         }
-    });
+    }
 
     cambios.sort((a, b) => b.diff - a.diff);
 
-    const bannerSpike = document.getElementById('bannerSpike');
     if (cambios.length > 0) {
         bannerSpike.style.display = 'block';
         const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];

@@ -2,7 +2,7 @@
 
 **Autora:** Alejandra Medina Bobadilla
 **Curso:** Vibe Coding e IA Generativa · **Profesor:** José Antonio Delgado Alfonso
-**Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`, v1.7.10)
+**Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`, v1.7.11)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
 **Memoria de sesiones con IA:** ver `PROMPT-LOG.md`
 
