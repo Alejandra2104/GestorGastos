@@ -1322,7 +1322,7 @@ function renderSpikeBanner() {
         const gastado = gastosCatActual[cat] || 0;
         const gastadoAnt = gastosCatAnterior[cat] || 0;
         const diff = gastado - gastadoAnt;
-        if (Math.abs(diff) >= 0.01) {
+        if (diff >= 0.01) {
             cambios.push({ cat, gastado, gastadoAnt, diff });
         }
     });
