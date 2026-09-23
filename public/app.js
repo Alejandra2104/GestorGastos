@@ -1315,24 +1315,31 @@ function renderSpikeBanner() {
         }
     });
 
-    let catMayorDiff = null;
-    let maxDiff = 0;
+    const todasCats = new Set([...Object.keys(gastosCatActual), ...Object.keys(gastosCatAnterior)]);
+    const cambios = [];
 
-    for (const [cat, gastado] of Object.entries(gastosCatActual)) {
+    todasCats.forEach(cat => {
+        const gastado = gastosCatActual[cat] || 0;
         const gastadoAnt = gastosCatAnterior[cat] || 0;
         const diff = gastado - gastadoAnt;
-        if (diff > maxDiff && diff >= 40) {
-            maxDiff = diff;
-            catMayorDiff = cat;
+        if (Math.abs(diff) >= 0.01) {
+            cambios.push({ cat, gastado, gastadoAnt, diff });
         }
-    }
+    });
+
+    cambios.sort((a, b) => b.diff - a.diff);
 
     const bannerSpike = document.getElementById('bannerSpike');
-    if (catMayorDiff) {
+    if (cambios.length > 0) {
         bannerSpike.style.display = 'block';
         const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-        document.getElementById('lblSpikeTexto').innerHTML = 
-            `En <strong>"${catMayorDiff}"</strong> habéis gastado <strong>${gastosCatActual[catMayorDiff].toFixed(2)} €</strong> (+${maxDiff.toFixed(2)} € más que en ${nombresMeses[mesAnt - 1]}).`;
+        const nombreMesAnt = nombresMeses[mesAnt - 1];
+        document.getElementById('lblSpikeTexto').innerHTML =
+            cambios.map(c => {
+                const signo = c.diff > 0 ? '+' : '';
+                const palabra = c.diff > 0 ? 'más' : 'menos';
+                return `En <strong>"${c.cat}"</strong> habéis gastado <strong>${c.gastado.toFixed(2)} €</strong> (${signo}${c.diff.toFixed(2)} € ${palabra} que en ${nombreMesAnt}).`;
+            }).join('<br>');
     } else {
         bannerSpike.style.display = 'none';
     }
