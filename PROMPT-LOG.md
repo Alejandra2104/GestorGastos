@@ -6,10 +6,10 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.7.10
+**Versión documentada:** v1.7.11
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
-> Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.7.10), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
+> Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.7.11), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
 
 ## Stack real (verificado en repo)
 
@@ -41,7 +41,7 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 |------|-------------|----------------|--------------------------------|
 | 1. Código inicial en local + PWA | Gemini | Generó la APP base: balance mensual, añadir gasto/ingreso, categorías, LocalStorage, diseño inicial + la convirtió en PWA (`manifest.json`, `sw.js`, iconos) para instalar en cualquier SO | Pidió expresamente que fuera instalable en Windows/Mac/Linux/Android/iOS, probó en local, detectó que faltaba visión familiar |
 | 2. Subida a GitHub + carpeta | Pi | Ayudó a correr el proyecto en GitHub, organizar `public/`, crear `deploy-pages.yml`, subir artefactos, conectar Supabase y ajustes estéticos (barra de pestañas arriba) | Decidió estructura `public/` como publicable, pidió la conexión a Supabase y la barra arriba para el móvil, verificó Pages |
-| 3. Retoques finales v1.4 → v1.7.10 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
+| 3. Retoques finales v1.4 → v1.7.11 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
 
 ## Sesiones reconstruidas desde `git log`
 
@@ -112,6 +112,12 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Error detectado por Alejandra probando con datos nuevos (no demo):** en agosto puso 30 € en Transporte y en septiembre 60 € (+30 €) y el banner de la Meta de Ahorro no salía, mientras que en la demo sí (Otros +85 €). Causa: `renderSpikeBanner` (`public/app.js:1324`) exigía `diff >= 40` y solo mostraba la categoría con mayor subida.
 * **Cambios pedidos por la autora:** (1) sin límite mínimo —cualquier subida ≥ 0,01 € avisa— y todas las categorías con subida, no solo la mayor (v1.7.8 llegó a mostrar también bajadas y en v1.7.9 se dejó solo en subidas a petición expresa: si no hay más gasto, no aparece); (2) texto simplificado —antes `En "Alimentación" habéis gastado 60.00 € (+30.00 € más que en Agosto)`, ahora `En "Alimentación" habéis gastado 30.00 € más que en Agosto`—.
 * **Verificación:** simulación (30→60 muestra, bajadas e iguales ocultan, demo Sept solo `Otros +85`), `node --check` OK, versión visible + `?v=` y SW (`v1.8.6` → `v1.8.8`) subidos en cada cambio con push a `main` (Pages redespliega solo `public/`).
+
+### S11 — Banner solo con movimientos de gasto y con previo (23/09/2026, v1.7.11)
+* Commit: `7ee7014 Banner solo movimientos de gasto, sin gastos previos no sale + v1.7.11`.
+* **Caso de Alejandra con datos nuevos (no demo):** solo tenía datos en septiembre y en agosto nada (ni fijos ni movimientos), y el banner decía "has gastado X más que en agosto" comparando contra 0.
+* **Regla pedida por la autora:** el banner usa solo movimientos de gasto (`estado.transacciones` tipo gasto: ni ingresos ni fijos); si el mes anterior no tiene ningún gasto (vacío o solo ingresos) no sale nada; si sí tiene, salen las categorías con subida (ambos meses o nuevas de este mes, p. ej. `Otros +85`) con el texto corto `En "X" habéis gastado 30.00 € más que en Agosto`.
+* **Verificación:** septiembre-solo queda oculto, agosto-solo-ingreso queda oculto, Ago 30 / Sep 60 en Transporte muestra +30, demo septiembre sigue mostrando solo `Otros +85` (agosto demo sí tiene gastos), `node --check` OK, versión + SW (`v1.8.9`) y push a `main`.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
