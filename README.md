@@ -2,7 +2,7 @@
 
 **Autora:** Alejandra Medina Bobadilla
 **Curso:** Vibe Coding e IA Generativa · **Profesor:** José Antonio Delgado Alfonso
-**Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`, v1.7.11)
+**Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`, v1.7.12)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
 **Memoria de sesiones con IA:** ver `PROMPT-LOG.md`
 
@@ -21,7 +21,8 @@ Este MVP es una app familiar compartida, instalable y offline, que permite apunt
 * **Reparto familiar:** deudas entre miembros con lo marcado como compartido, sea puntual o fijo. Por concepto ("Laura le debe 1.400 € a Alejandro en fijos: Reforma baño") y liquidación total. Gasto compartido: los demás le deben a quien pagó. Ingreso compartido (al revés): quien lo cobró se lo debe a los demás.
 * **Metas de ahorro:** meta editable por mes, reparto proporcional por % entre miembros (siempre suma 100 %), barra de progreso, aviso de déficit.
 * **Plan de amortización:** si un mes no se ahorra, el siguiente pone de base `lo que falta + extra voluntario`. Recuperación en 2, 4, 6, 8 o 12 meses con opción de saldar antes. Nota: quitar la meta de un mes no cancela su plan (la deuda persiste); el plan solo desaparece con `Saldar Deuda Anticipadamente`. Si un mes ya tiene meta propia mayor que la cuota, se respeta la meta del usuario.
-* **Alerta por categoría:** detecta cuando se gasta más en una categoría respecto al mes anterior.
+* **Alerta por categoría:** detecta cuando se gasta más en una categoría respecto al mes anterior (solo movimientos de gasto, sin fijos ni ingresos; si el mes anterior no tiene gastos no avisa).
+* **Sugerencia de ahorro:** si no se alcanza la meta, propone de qué categorías recortar el mes que viene según tu media de 3 meses, detecta gastos puntuales y avisa si ni recortando todo se cubriría el déficit.
 * **Hogar compartido en la nube (Supabase):** vincular teléfonos con un código (`public/nube.js` + `public/nube-config.js`, funciones `obtener_hogar` / `guardar_hogar`). Sin vínculo, todo sigue local.
 * **Copia de seguridad:** descarga/importación JSON, exportar a Excel/CSV por mes y por año, y copia personal en la nube por teléfono + PIN (`guardar_respaldo` / `obtener_respaldo` en `public/app.js`) que sobrevive al reset del dispositivo.
 * **PWA instalable en cualquier SO:** se pidió en Gemini para instalar la misma app en Windows, macOS, Linux, Android e iOS, con ventana propia y modo offline (`manifest.json`, `sw.js`, `offline.html`, iconos).

@@ -6,10 +6,10 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.7.11
+**Versión documentada:** v1.7.12
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
-> Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.7.11), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
+> Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.7.12), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
 
 ## Stack real (verificado en repo)
 
@@ -41,7 +41,7 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 |------|-------------|----------------|--------------------------------|
 | 1. Código inicial en local + PWA | Gemini | Generó la APP base: balance mensual, añadir gasto/ingreso, categorías, LocalStorage, diseño inicial + la convirtió en PWA (`manifest.json`, `sw.js`, iconos) para instalar en cualquier SO | Pidió expresamente que fuera instalable en Windows/Mac/Linux/Android/iOS, probó en local, detectó que faltaba visión familiar |
 | 2. Subida a GitHub + carpeta | Pi | Ayudó a correr el proyecto en GitHub, organizar `public/`, crear `deploy-pages.yml`, subir artefactos, conectar Supabase y ajustes estéticos (barra de pestañas arriba) | Decidió estructura `public/` como publicable, pidió la conexión a Supabase y la barra arriba para el móvil, verificó Pages |
-| 3. Retoques finales v1.4 → v1.7.11 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
+| 3. Retoques finales v1.4 → v1.7.12 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
 
 ## Sesiones reconstruidas desde `git log`
 
@@ -118,6 +118,12 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Caso de Alejandra con datos nuevos (no demo):** solo tenía datos en septiembre y en agosto nada (ni fijos ni movimientos), y el banner decía "has gastado X más que en agosto" comparando contra 0.
 * **Regla pedida por la autora:** el banner usa solo movimientos de gasto (`estado.transacciones` tipo gasto: ni ingresos ni fijos); si el mes anterior no tiene ningún gasto (vacío o solo ingresos) no sale nada; si sí tiene, salen las categorías con subida (ambos meses o nuevas de este mes, p. ej. `Otros +85`) con el texto corto `En "X" habéis gastado 30.00 € más que en Agosto`.
 * **Verificación:** septiembre-solo queda oculto, agosto-solo-ingreso queda oculto, Ago 30 / Sep 60 en Transporte muestra +30, demo septiembre sigue mostrando solo `Otros +85` (agosto demo sí tiene gastos), `node --check` OK, versión + SW (`v1.8.9`) y push a `main`.
+
+### S12 — Sugerencia de ahorro por categorías (23/09/2026, probada en rama y aprobada, v1.7.12)
+* Commits: `e111880 PRUEBA: sugerencia de ahorro por categorias en banner de deficit` (rama `prueba-sugerencia-ahorro`, fusionada a `main`).
+* **Idea de Alejandra:** si no se alcanza la meta del mes, que la app sugiera de qué categorías ahorrar y cuánto para el mes siguiente, aprendiendo de los hábitos de gasto.
+* **Implementación (solo con datos que la app ya guarda, sin IA externa):** nueva caja `sugerenciaAhorroBox` en el banner de déficit (`public/index.html`) + `renderSugerenciaAhorro` (`public/app.js`). Con el déficit ya calculado, reparte recortes por exceso sobre la media de hasta 3 meses anteriores (solo movimientos de gasto: ni ingresos ni fijos), detecta puntuales sin historial (p. ej. reforma 2.800 € en Vivienda) y avisa si ni recortando todo se cubre ("convendría revisar la meta"). Si no hay gastos ese mes, lo dice en vez de sugerir.
+* **Prueba dirigida por la autora:** rama aparte sin tocar `main` ni la demo (`DATOS_DEMO` intacta); probada en local con la demo de agosto (déficit 797,20 €: sugiere Alimentación 73,03 € + Salud 28,33 € + Transporte 5,33 €, marca Vivienda/Moda como puntuales y avisa de 690,51 € restantes); aprobada y fusionada con subida de versión + SW (`v1.8.10`).
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
