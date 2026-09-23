@@ -17,8 +17,8 @@ Este MVP es una app familiar compartida, instalable y offline, que permite apunt
 * **Resumen:** balance neto mensual, ahorro anual, medias 12 meses, gastos fijos programados.
 * **Movimientos del mes:** añadir/editar/borrar gasto o ingreso con concepto, cantidad, categoría, fecha, forma de pago (efectivo/tarjeta), miembro y marca de compartido. Filtros por tipo, forma, categoría y miembro.
 * **Calendario:** movimientos por día, añadir a fecha concreta. Se ubica en el día y mes actuales por defecto (corrección pedida por la autora, la app no lo hacía).
-* **Gastos fijos:** conceptos recurrentes (hipoteca, nóminas, suministros, suscripciones) con día del mes.
-* **Reparto familiar:** cálculo automático de saldos compartidos por teléfono/miembro.
+* **Fijos:** conceptos recurrentes (hipoteca, nóminas, suministros, suscripciones) con día del mes, miembro que paga/cobra y marca de compartido. Nada es compartido por defecto: el cliente lo precisa en Nueva Operación o en el formulario del fijo.
+* **Reparto familiar:** deudas entre miembros con lo marcado como compartido, sea puntual o fijo. Por concepto ("Laura le debe 1.400 € a Alejandro en fijos: Reforma baño"), por categoría y liquidación total. Gasto compartido: los demás le deben a quien pagó. Ingreso compartido (al revés): quien lo cobró se lo debe a los demás.
 * **Metas de ahorro:** meta editable por mes, reparto proporcional por % entre miembros (siempre suma 100 %), barra de progreso, aviso de déficit.
 * **Plan de amortización:** si un mes no se ahorra, el siguiente pone de base `lo que falta + extra voluntario`. Recuperación en 2, 4, 6, 8 o 12 meses con opción de saldar antes. Nota: quitar la meta de un mes no cancela su plan (la deuda persiste); el plan solo desaparece con `Saldar Deuda Anticipadamente`. Si un mes ya tiene meta propia mayor que la cuota, se respeta la meta del usuario.
 * **Alerta por categoría:** detecta cuando se gasta más en una categoría respecto al mes anterior.

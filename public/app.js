@@ -34,13 +34,13 @@ const DATOS_DEMO = {
         "2026-07": 400, "2026-08": 300
     },
     recurrentes: [
-        { id: 1, concepto: "Hipoteca / Alquiler Piso", tipo: "gasto", dia: 1, cantidad: 850, categoria: "Vivienda", activo: true },
-        { id: 2, concepto: "Nómina Fija Alejandro", tipo: "ingreso", dia: 1, cantidad: 2150, categoria: "Banco y Seguros", activo: true },
-        { id: 3, concepto: "Nómina Fija Laura", tipo: "ingreso", dia: 2, cantidad: 1850, categoria: "Banco y Seguros", activo: true },
-        { id: 4, concepto: "Seguro de Hogar & Coche", tipo: "gasto", dia: 5, cantidad: 55, categoria: "Banco y Seguros", activo: true },
-        { id: 5, concepto: "Fibra Óptica 1Gb + Móviles", tipo: "gasto", dia: 10, cantidad: 45, categoria: "Suministros", activo: true },
-        { id: 6, concepto: "Factura Eléctrica", tipo: "gasto", dia: 15, cantidad: 75, categoria: "Suministros", activo: true },
-        { id: 7, concepto: "Suscripciones (Streaming/Gym)", tipo: "gasto", dia: 20, cantidad: 38, categoria: "Ocio y Actividades", activo: true }
+        { id: 1, concepto: "Hipoteca / Alquiler Piso", tipo: "gasto", dia: 1, cantidad: 850, categoria: "Vivienda", telefono: "600111222", esCompartido: true, activo: true },
+        { id: 2, concepto: "Nómina Fija Alejandro", tipo: "ingreso", dia: 1, cantidad: 2150, categoria: "Banco y Seguros", telefono: "600111222", esCompartido: false, activo: true },
+        { id: 3, concepto: "Nómina Fija Laura", tipo: "ingreso", dia: 2, cantidad: 1850, categoria: "Banco y Seguros", telefono: "600333444", esCompartido: false, activo: true },
+        { id: 4, concepto: "Seguro de Hogar & Coche", tipo: "gasto", dia: 5, cantidad: 55, categoria: "Banco y Seguros", telefono: "600111222", esCompartido: true, activo: true },
+        { id: 5, concepto: "Fibra Óptica 1Gb + Móviles", tipo: "gasto", dia: 10, cantidad: 45, categoria: "Suministros", telefono: "600333444", esCompartido: true, activo: true },
+        { id: 6, concepto: "Factura Eléctrica", tipo: "gasto", dia: 15, cantidad: 75, categoria: "Suministros", telefono: "600333444", esCompartido: true, activo: true },
+        { id: 7, concepto: "Suscripciones (Streaming/Gym)", tipo: "gasto", dia: 20, cantidad: 38, categoria: "Ocio y Actividades", telefono: "600111222", esCompartido: true, activo: true }
     ],
     transacciones: [
         { id: 101, telefono: "600111222", tipo: "ingreso", concepto: "Bonus puntual", categoria: "Banco y Seguros", cantidad: 300, esCompartido: false, formaPago: "tarjeta", fecha: "2026-03-05T09:30:00.000Z" },
@@ -514,12 +514,12 @@ function obtenerOperacionesMes(anio, mesNum1Indexed) {
             const fechaFijo = new Date(anio, mesNum1Indexed - 1, r.dia, 12, 0, 0);
             ops.push({
                 id: `rec-${r.id}`,
-                telefono: "Fijo",
+                telefono: r.telefono || null,
                 tipo: r.tipo || "gasto",
                 concepto: r.concepto,
                 categoria: r.categoria || "Vivienda",
                 cantidad: r.cantidad,
-                esCompartido: true,
+                esCompartido: !!r.esCompartido,
                 esFijo: true,
                 fecha: fechaFijo.toISOString()
             });
@@ -1616,7 +1616,7 @@ function renderTransacciones() {
                         <button class="btn-action-icon" title="Editar" onclick="editarOperacion(${t.id})">✏️</button>
                         <button class="btn-action-icon delete" title="Eliminar" onclick="confirmarEliminarOperacion(${t.id})">🗑️</button>
                     ` : `
-                        <button class="btn-action-icon" title="Ver en Fijos" onclick="cambiarTab('recurrentes')">📌</button>
+                        <button class="btn-action-icon" title="Ver en Fijo" onclick="cambiarTab('recurrentes')">📌</button>
                     `}
                 </div>
             </div>
@@ -1794,6 +1794,7 @@ function renderRecurrentes() {
         const catConfig = CATEGORIAS_CONFIG[r.categoria] || { icon: "📁", color: "#94a3b8" };
         const card = document.createElement('div');
         card.className = 'recurring-card';
+        const nombrePagador = (r.telefono && estado.usuarios && estado.usuarios[r.telefono]) || (r.telefono ? r.telefono : 'Sin asignar');
 
         card.innerHTML = `
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -1805,8 +1806,11 @@ function renderRecurrentes() {
                         ${r.concepto}
                     </h4>
                     <span style="font-size: 0.78rem; color: var(--text-muted);">
-                        Día ${r.dia} de cada mes · ${r.categoria}
+                        Día ${r.dia} de cada mes · ${r.categoria} · 👤 ${nombrePagador}
                     </span>
+                    <div style="margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap;">
+                        ${r.esCompartido ? '<span class="pill-tag pill-shared">👥 Compartido</span>' : '<span class="pill-tag" style="background: #f3f4f6; color: #6b7280;">🔒 No compartido</span>'}
+                    </div>
                 </div>
             </div>
             <div style="text-align: right;">
@@ -1834,78 +1838,95 @@ function renderSplit() {
     const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
     const ops = obtenerOperacionesMes(anio, mesNum);
 
-    const compartidos = ops.filter(op => op.tipo === 'gasto' && op.esCompartido);
-    const aportesPorUsuario = {};
+    // Solo lo marcado como compartido, sea puntual o fijo; gastos e ingresos.
+    const compartidos = ops.filter(op => op.esCompartido && (op.tipo === 'gasto' || op.tipo === 'ingreso'));
+    const miembros = Object.keys(estado.usuarios || {});
+    const N = miembros.length;
+    const eur = (x) => `${Number(x).toFixed(2)} €`;
+    const nombreDe = (tel) => ((estado.usuarios && estado.usuarios[tel]) || tel || '—');
 
-    Object.keys(estado.usuarios).forEach(tel => {
-        aportesPorUsuario[tel] = 0;
-    });
-
-    let totalGastoCompartido = 0;
+    // Neto por miembro: gastos pagados − ingresos cobrados (compartidos).
+    // Fijos sin miembro asignado: se reparten a partes iguales (neutro en saldos).
+    const pagG = {}, cobI = {};
+    miembros.forEach(tel => { pagG[tel] = 0; cobI[tel] = 0; });
+    let totG = 0, totI = 0;
+    const sinMiembro = [];
     compartidos.forEach(op => {
-        totalGastoCompartido += op.cantidad;
-        const tel = op.telefono;
-        aportesPorUsuario[tel] = (aportesPorUsuario[tel] || 0) + op.cantidad;
+        const tel = op.telefono ? String(op.telefono) : null;
+        const conocido = !!(tel && miembros.includes(tel));
+        if (op.tipo === 'ingreso') {
+            totI += op.cantidad;
+            if (conocido) cobI[tel] += op.cantidad;
+            else sinMiembro.push(op);
+        } else {
+            totG += op.cantidad;
+            if (conocido) pagG[tel] += op.cantidad;
+            else sinMiembro.push(op);
+        }
+    });
+    if (N > 0) sinMiembro.forEach(op => {
+        const parte = op.cantidad / N;
+        miembros.forEach(tel => {
+            if (op.tipo === 'ingreso') cobI[tel] += parte;
+            else pagG[tel] += parte;
+        });
     });
 
-    // Tarjetas de Miembros
+    const neto = {};
+    miembros.forEach(tel => { neto[tel] = pagG[tel] - cobI[tel]; });
+    const netoTotal = totG - totI;
+    const cuota = N > 0 ? netoTotal / N : 0;
+    const saldo = {};
+    miembros.forEach(tel => { saldo[tel] = neto[tel] - cuota; });
+
+    // Tarjetas de Miembros: balance compartido del mes
     const containerMiembros = document.getElementById('splitMembersContainer');
     containerMiembros.innerHTML = '';
 
-    const usuariosKeys = Object.keys(aportesPorUsuario);
-    usuariosKeys.forEach(tel => {
-        const pagado = aportesPorUsuario[tel];
-        const porcentaje = totalGastoCompartido > 0 ? ((pagado / totalGastoCompartido) * 100).toFixed(1) : '0.0';
-        const nombre = estado.usuarios[tel] || tel;
-
+    miembros.forEach(tel => {
+        const s = saldo[tel];
+        const estadoTxt = s > 0.01 ? `Le deben <strong>${eur(s)}</strong>` : (s < -0.01 ? `Debe <strong>${eur(-s)}</strong>` : 'Equilibrado');
         containerMiembros.innerHTML += `
             <div class="split-member-card">
-                <span style="font-size: 0.8rem; opacity: 0.8; text-transform: uppercase;">Aportación</span>
-                <h3 style="font-size: 1.15rem; margin: 4px 0;">${nombre}</h3>
-                <div style="font-size: 1.4rem; font-weight: 800; color: #e9d5ff;">${pagado.toFixed(2)} €</div>
-                <small style="opacity: 0.8;">${porcentaje}% del total compartido</small>
+                <span style="font-size: 0.8rem; opacity: 0.8; text-transform: uppercase;">Balance compartido</span>
+                <h3 style="font-size: 1.15rem; margin: 4px 0;">${nombreDe(tel)}</h3>
+                <div style="font-size: 1.4rem; font-weight: 800; color: #e9d5ff;">${s > 0.01 ? '+' : s < -0.01 ? '-' : ''}${eur(Math.abs(s))}</div>
+                <small style="opacity: 0.8;">${estadoTxt}</small>
+                <small style="opacity: 0.7; display: block;">Pagó ${eur(pagG[tel])} en gastos · Cobró ${eur(cobI[tel])} en ingresos</small>
             </div>
         `;
     });
 
-    // Liquidación para N miembros
+    // Liquidación para N miembros (neto: gastos − ingresos compartidos)
     const lblSettlement = document.getElementById('lblSettlementMessage');
-    const N = usuariosKeys.length;
 
-    if (N === 0 || totalGastoCompartido === 0) {
-        lblSettlement.textContent = `Total compartido este mes: ${totalGastoCompartido.toFixed(2)} €. Registra gastos con la casilla "Gasto compartido" para calcular el balance.`;
+    if (N === 0 || (totG === 0 && totI === 0)) {
+        lblSettlement.textContent = `Total compartido este mes: ${eur(netoTotal)}. Registra operaciones con la casilla "Compartido" para calcular el balance.`;
     } else if (N === 2) {
-        const u1 = usuariosKeys[0];
-        const u2 = usuariosKeys[1];
-        const p1 = aportesPorUsuario[u1];
-        const p2 = aportesPorUsuario[u2];
-        const nom1 = estado.usuarios[u1] || u1;
-        const nom2 = estado.usuarios[u2] || u2;
-
-        const mitad = totalGastoCompartido / 2;
-        const dif = p1 - mitad;
+        const u1 = miembros[0];
+        const u2 = miembros[1];
+        const dif = saldo[u1];
 
         if (Math.abs(dif) < 0.5) {
-            lblSettlement.innerHTML = `⚖️ <strong>Gastos al 50% equilibrados:</strong> Las aportaciones de ${nom1} y ${nom2} están compensadas este mes.`;
+            lblSettlement.innerHTML = `⚖️ <strong>Balance compartido equilibrado:</strong> Las cuentas de ${nombreDe(u1)} y ${nombreDe(u2)} están compensadas este mes (gastos e ingresos compartidos).`;
         } else if (dif > 0) {
-            lblSettlement.innerHTML = `💸 <strong>${nom2}</strong> debe transferir <strong>${dif.toFixed(2)} €</strong> a <strong>${nom1}</strong> para equilibrar los gastos compartidos de este mes.`;
+            lblSettlement.innerHTML = `💸 <strong>${nombreDe(u2)}</strong> debe transferir <strong>${eur(dif)}</strong> a <strong>${nombreDe(u1)}</strong> para equilibrar el balance compartido de este mes.`;
         } else {
-            lblSettlement.innerHTML = `💸 <strong>${nom1}</strong> debe transferir <strong>${Math.abs(dif).toFixed(2)} €</strong> a <strong>${nom2}</strong> para equilibrar los gastos compartidos de este mes.`;
+            lblSettlement.innerHTML = `💸 <strong>${nombreDe(u1)}</strong> debe transferir <strong>${eur(Math.abs(dif))}</strong> a <strong>${nombreDe(u2)}</strong> para equilibrar el balance compartido de este mes.`;
         }
     } else {
-        const cuotaEquitativa = totalGastoCompartido / N;
+        const cuotaEquitativa = cuota;
         const deudores = [];
         const acreedores = [];
 
-        usuariosKeys.forEach(tel => {
-            const saldo = aportesPorUsuario[tel] - cuotaEquitativa;
-            const nombre = estado.usuarios[tel] || tel;
-            if (saldo < -0.01) deudores.push({ tel, nombre, debe: -saldo });
-            else if (saldo > 0.01) acreedores.push({ tel, nombre, cobra: saldo });
+        miembros.forEach(tel => {
+            const s = saldo[tel];
+            if (s < -0.01) deudores.push({ tel, nombre: nombreDe(tel), debe: -s });
+            else if (s > 0.01) acreedores.push({ tel, nombre: nombreDe(tel), cobra: s });
         });
 
         if (deudores.length === 0) {
-            lblSettlement.innerHTML = `⚖️ <strong>Gastos perfectamente equilibrados:</strong> Todos los miembros (${N}) han aportado su cuota (${cuotaEquitativa.toFixed(2)} € por persona).`;
+            lblSettlement.innerHTML = `⚖️ <strong>Cuentas perfectamente equilibradas:</strong> Todos los miembros (${N}) han aportado su cuota neta (${eur(cuotaEquitativa)} por persona).`;
         } else {
             const transferencias = [];
             let i = 0, j = 0;
@@ -1915,7 +1936,7 @@ function renderSplit() {
                 const cantidad = Math.min(d.debe, a.cobra);
 
                 if (cantidad > 0.01) {
-                    transferencias.push(`💸 <strong>${d.nombre}</strong> debe transferir <strong>${cantidad.toFixed(2)} €</strong> a <strong>${a.nombre}</strong>`);
+                    transferencias.push(`💸 <strong>${d.nombre}</strong> debe transferir <strong>${eur(cantidad)}</strong> a <strong>${a.nombre}</strong>`);
                 }
 
                 d.debe -= cantidad;
@@ -1927,13 +1948,81 @@ function renderSplit() {
 
             lblSettlement.innerHTML = `
                 <div>
-                    ⚖️ <strong>Cuota equitativa:</strong> ${cuotaEquitativa.toFixed(2)} € por miembro (${N} miembros).
+                    ⚖️ <strong>Cuota equitativa neta:</strong> ${eur(cuotaEquitativa)} por miembro (${N} miembros).
                     <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px;">
                         ${transferencias.join('')}
                     </div>
                 </div>
             `;
         }
+    }
+
+    // Deudas por concepto: "N le debe X a N2 en fijos: concepto (categoría)".
+    // Gasto compartido: quien no pagó le debe su parte a quien pagó.
+    // Ingreso compartido (al revés): quien lo cobró le debe su parte a los demás.
+    const contConcept = document.getElementById('splitConceptContainer');
+    if (contConcept) {
+        const lineas = [];
+        if (N >= 2) {
+            compartidos.forEach(op => {
+                const tel = op.telefono ? String(op.telefono) : null;
+                if (!tel || !miembros.includes(tel)) return;
+                const parte = op.cantidad / N;
+                if (parte <= 0.005) return;
+                const origen = op.esFijo ? 'fijos' : 'puntuales';
+                const etiqueta = `${op.concepto} (${op.categoria || 'General'})`;
+                miembros.filter(m => m !== tel).forEach(otro => {
+                    if (op.tipo === 'ingreso') {
+                        lineas.push(`<div>💸 <strong>${nombreDe(tel)}</strong> le debe <strong>${eur(parte)}</strong> a <strong>${nombreDe(otro)}</strong> en ${origen}: ${etiqueta}</div>`);
+                    } else {
+                        lineas.push(`<div>💸 <strong>${nombreDe(otro)}</strong> le debe <strong>${eur(parte)}</strong> a <strong>${nombreDe(tel)}</strong> en ${origen}: ${etiqueta}</div>`);
+                    }
+                });
+            });
+        }
+        sinMiembro.forEach(op => {
+            lineas.push(`<div style="opacity: 0.75;">➗ <strong>${op.concepto}</strong> (${eur(op.cantidad)}) sin miembro asignado: repartido a partes iguales, no genera deudas.</div>`);
+        });
+        contConcept.innerHTML = lineas.length ? lineas.join('') : '<span style="opacity: 0.7;">Sin deudas por concepto este mes.</span>';
+    }
+
+    // Deudas por categoría (puntuales + fijos juntos)
+    const contCat = document.getElementById('splitCategoryContainer');
+    if (contCat) {
+        const porCat = {};
+        compartidos.forEach(op => {
+            const c = op.categoria || 'General';
+            if (!porCat[c]) porCat[c] = { net: {}, tot: 0 };
+            const v = op.tipo === 'ingreso' ? -op.cantidad : op.cantidad;
+            porCat[c].tot += v;
+            const tel = op.telefono ? String(op.telefono) : null;
+            if (tel && miembros.includes(tel)) {
+                porCat[c].net[tel] = (porCat[c].net[tel] || 0) + v;
+            } else if (N > 0) {
+                miembros.forEach(m => { porCat[c].net[m] = (porCat[c].net[m] || 0) + v / N; });
+            }
+        });
+        const htmlCat = [];
+        Object.entries(porCat).forEach(([cat, d]) => {
+            const fair = N > 0 ? d.tot / N : 0;
+            const deud = [], acre = [];
+            miembros.forEach(m => {
+                const b = (d.net[m] || 0) - fair;
+                if (b < -0.01) deud.push({ m, debe: -b });
+                else if (b > 0.01) acre.push({ m, cobra: b });
+            });
+            const tr = [];
+            let ii = 0, jj = 0;
+            while (ii < deud.length && jj < acre.length) {
+                const c = Math.min(deud[ii].debe, acre[jj].cobra);
+                if (c > 0.01) tr.push(`<strong>${nombreDe(deud[ii].m)}</strong> le debe <strong>${eur(c)}</strong> a <strong>${nombreDe(acre[jj].m)}</strong>`);
+                deud[ii].debe -= c; acre[jj].cobra -= c;
+                if (deud[ii].debe <= 0.01) ii++;
+                if (acre[jj].cobra <= 0.01) jj++;
+            }
+            htmlCat.push(`<div>📂 <strong>${cat}</strong>: ${tr.length ? tr.join(' · ') : 'equilibrado.'}</div>`);
+        });
+        contCat.innerHTML = htmlCat.length ? htmlCat.join('') : '<span style="opacity: 0.7;">Sin movimientos compartidos este mes.</span>';
     }
 
     // Directorio de Miembros
@@ -2070,15 +2159,18 @@ function cargarSelectCategorias() {
 function actualizarSelectUsuarios() {
     const selectOpUser = document.getElementById('opTelefono');
     const selectFilterUser = document.getElementById('filterUsuario');
+    const selectRecUser = document.getElementById('recTelefono');
 
     const prevFiltroUsr = (estado.filtros && estado.filtros.usuario) || (selectFilterUser && selectFilterUser.value) || 'todos';
 
     if (selectOpUser) selectOpUser.innerHTML = '';
     if (selectFilterUser) selectFilterUser.innerHTML = '<option value="todos">Todos los Miembros</option>';
+    if (selectRecUser) selectRecUser.innerHTML = '<option value="">Sin asignar (se reparte a partes iguales)</option>';
 
     Object.entries(estado.usuarios || {}).forEach(([tel, nom]) => {
         if (selectOpUser) selectOpUser.innerHTML += `<option value="${tel}">${nom} (${tel})</option>`;
         if (selectFilterUser) selectFilterUser.innerHTML += `<option value="${tel}">${nom}</option>`;
+        if (selectRecUser) selectRecUser.innerHTML += `<option value="${tel}">${nom} (${tel})</option>`;
     });
     // Preservar el filtro de miembro si sigue existiendo; si no, volver a "todos"
     // (antes se reconstruía el desplegable pero estado.filtros conservaba el id viejo
@@ -2226,6 +2318,8 @@ async function guardarOperacion(e) {
                 dia: diaFijo,
                 cantidad,
                 categoria,
+                telefono: telefono || null,
+                esCompartido: !!esCompartido,
                 activo: true
             };
             estado.recurrentes.push(nuevoRec);
@@ -2318,13 +2412,15 @@ async function confirmarEliminarOperacion(id) {
 function abrirModalRecurrente(prefill = {}) {
     document.getElementById('formRecurrente').reset();
     document.getElementById('recId').value = prefill.id || '';
-    document.getElementById('modalRecurrenteTitle').textContent = prefill.id ? 'Editar Concepto Fijo' : 'Nuevo Concepto Fijo';
+    document.getElementById('modalRecurrenteTitle').textContent = prefill.id ? 'Editar Fijo' : 'Nuevo Fijo';
 
     document.getElementById('recTipo').value = prefill.tipo || 'gasto';
     document.getElementById('recCantidad').value = prefill.cantidad || '';
     document.getElementById('recConcepto').value = prefill.concepto || '';
     document.getElementById('recDia').value = prefill.dia || 1;
     document.getElementById('recCategoria').value = prefill.categoria || 'Vivienda';
+    document.getElementById('recTelefono').value = prefill.telefono || '';
+    document.getElementById('recEsCompartido').checked = !!prefill.esCompartido;
 
     abrirModal('modalRecurrente');
 }
@@ -2337,8 +2433,10 @@ async function guardarRecurrente(e) {
     const concepto = document.getElementById('recConcepto').value.trim();
     const dia = parseInt(document.getElementById('recDia').value);
     const categoria = document.getElementById('recCategoria').value;
+    const telefono = document.getElementById('recTelefono') ? document.getElementById('recTelefono').value || null : null;
+    const esCompartido = document.getElementById('recEsCompartido') ? document.getElementById('recEsCompartido').checked : false;
 
-    const payload = { tipo, cantidad, concepto, dia, categoria, activo: true };
+    const payload = { tipo, cantidad, concepto, dia, categoria, telefono, esCompartido, activo: true };
 
     if (id) {
         const index = estado.recurrentes.findIndex(r => r.id == id);
@@ -2348,13 +2446,13 @@ async function guardarRecurrente(e) {
         }
         guardarLocalmente();
         api(`/api/recurrente/${id}`, 'PUT', payload).catch(() => {});
-        mostrarToast('Concepto fijo actualizado', 'success');
+        mostrarToast('Fijo actualizado', 'success');
     } else {
         const nuevo = { id: Date.now(), ...payload };
         estado.recurrentes.push(nuevo);
         guardarLocalmente();
         api('/api/recurrente', 'POST', payload).catch(() => {});
-        mostrarToast('Concepto fijo registrado', 'success');
+        mostrarToast('Fijo registrado', 'success');
     }
 
     cerrarModal('modalRecurrente');
@@ -2368,12 +2466,12 @@ function editarRecurrente(id) {
 }
 
 async function eliminarRecurrente(id) {
-    if (confirm('¿Eliminar este concepto fijo periódico?')) {
+    if (confirm('¿Eliminar este fijo?')) {
         estado.recurrentes = estado.recurrentes.filter(r => r.id !== id);
         try { if (typeof NUBE_marcarBorrado === 'function') NUBE_marcarBorrado('rec', id); } catch (e) {}
         guardarLocalmente();
         api(`/api/recurrente/${id}`, 'DELETE').catch(() => {});
-        mostrarToast('Gasto fijo eliminado', 'success');
+        mostrarToast('Fijo eliminado', 'success');
         actualizarVistas();
     }
 }

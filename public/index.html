@@ -133,7 +133,7 @@
                 <span>📅</span> Calendario
             </button>
             <button class="tab-btn" onclick="cambiarTab('recurrentes')">
-                <span>📌</span> Gastos Fijos
+                <span>📌</span> Fijo
                 <span class="tab-badge" id="badgeRecurrentesCount">0</span>
             </button>
             <button class="tab-btn" onclick="cambiarTab('split')">
@@ -206,7 +206,7 @@
 
                 <div class="kpi-box">
                     <div class="kpi-box-top">
-                        <span class="title">Gastos Fijos Programados</span>
+                        <span class="title">Fijos Programados</span>
                         <span class="kpi-badge" style="background: var(--info-light); color: #0369a1;">Fijo</span>
                     </div>
                     <h3 id="valKpiFijosTotal">0.00 €</h3>
@@ -438,18 +438,18 @@
             <div class="card" style="background: linear-gradient(135deg, var(--bg-card) 0%, var(--primary-surface) 100%);">
                 <div class="card-header">
                     <div>
-                        <h2 class="card-title">📌 Conceptos Fijos Periódicos</h2>
-                        <p class="card-subtitle">Hipoteca, suministros, nóminas, suscripciones mensuales fijas</p>
+                        <h2 class="card-title">📌 Fijos</h2>
+                        <p class="card-subtitle">Hipoteca, suministros, nóminas, suscripciones mensuales: quien lo paga y si es compartido</p>
                     </div>
-                    <button class="btn btn-primary" onclick="abrirModalRecurrente()">➕ Nuevo Gasto/Ingreso Fijo</button>
+                    <button class="btn btn-primary" onclick="abrirModalRecurrente()">➕ Nuevo Fijo</button>
                 </div>
                 <div style="display: flex; gap: 20px; margin-top: 10px; flex-wrap: wrap;">
                     <div style="font-size: 0.9rem;">
-                        <span style="color: var(--text-muted);">Total Gastos Fijos: </span>
+                        <span style="color: var(--text-muted);">Total Fijos (gastos): </span>
                         <strong id="lblTotalFijosGastos" style="color: var(--danger); font-size: 1.1rem;">0.00 €/mes</strong>
                     </div>
                     <div style="font-size: 0.9rem;">
-                        <span style="color: var(--text-muted);">Total Ingresos Fijos: </span>
+                        <span style="color: var(--text-muted);">Total Fijos (ingresos): </span>
                         <strong id="lblTotalFijosIngresos" style="color: var(--success); font-size: 1.1rem;">0.00 €/mes</strong>
                     </div>
                 </div>
@@ -466,7 +466,7 @@
         <main id="tab-split" class="tab-content">
             <div class="split-summary-box">
                 <h2 style="font-size: 1.3rem; margin-bottom: 6px;">👥 Gastos Compartidos Familiares</h2>
-                <p style="opacity: 0.85; font-size: 0.88rem;">Cálculo automático de aportaciones y equilibrio de gastos marcados como "compartidos".</p>
+                <p style="opacity: 0.85; font-size: 0.88rem;">Deudas entre miembros con lo marcado como "compartido", sea puntual o fijo, por concepto y por categoría.</p>
 
                 <div class="split-members-row" id="splitMembersContainer">
                     <!-- Columnas de cada miembro generadas por JS -->
@@ -477,6 +477,20 @@
                     <button class="btn btn-outline" style="background: white; color: #065f46; border: none; font-size: 0.82rem;" onclick="registrarLiquidacion()">
                         🤝 Saldar y Registrar Ajuste
                     </button>
+                </div>
+
+                <div class="card" style="margin-top: 12px;">
+                    <h3 style="font-size: 1rem; margin-bottom: 8px;">🧾 Deudas por concepto</h3>
+                    <div id="splitConceptContainer" style="display: flex; flex-direction: column; gap: 6px; font-size: 0.88rem;">
+                        <!-- Líneas "N le debe X a N2 en fijos: concepto" generadas por JS -->
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 12px;">
+                    <h3 style="font-size: 1rem; margin-bottom: 8px;">📂 Deudas por categoría</h3>
+                    <div id="splitCategoryContainer" style="display: flex; flex-direction: column; gap: 6px; font-size: 0.88rem;">
+                        <!-- Líneas por categoría generadas por JS -->
+                    </div>
                 </div>
             </div>
 
@@ -759,10 +773,10 @@
     <!-- =====================================================================
          MODAL 3: NUEVO / EDITAR GASTO FIJO RECURRENTE
          ===================================================================== -->
-    <div id="modalRecurrente" class="modal-backdrop" onclick="cerrarModalFuera(event, 'modalRecurrente')">
+     <div id="modalRecurrente" class="modal-backdrop" onclick="cerrarModalFuera(event, 'modalRecurrente')">
         <div class="modal-container">
             <div class="modal-header">
-                <h3 class="modal-title" id="modalRecurrenteTitle">Nuevo Concepto Fijo</h3>
+                <h3 class="modal-title" id="modalRecurrenteTitle">Nuevo Fijo</h3>
                 <button class="modal-close-btn" onclick="cerrarModal('modalRecurrente')">✕</button>
             </div>
             <form id="formRecurrente" onsubmit="guardarRecurrente(event)">
@@ -772,8 +786,8 @@
                     <div class="form-group">
                         <label class="form-label" for="recTipo">Tipo</label>
                         <select id="recTipo" class="form-control">
-                            <option value="gasto">Gasto Fijo (-)</option>
-                            <option value="ingreso">Ingreso Fijo (+)</option>
+                            <option value="gasto">Gasto (-)</option>
+                            <option value="ingreso">Ingreso (+)</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -800,9 +814,23 @@
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label class="form-label" for="recTelefono">Miembro que paga / cobra</label>
+                    <select id="recTelefono" class="form-control">
+                        <!-- Rellenado por JS con los miembros -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem;">
+                        <input type="checkbox" id="recEsCompartido" style="width: 18px; height: 18px;">
+                        <span>Compartido (entra en el reparto familiar)</span>
+                    </label>
+                </div>
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline" onclick="cerrarModal('modalRecurrente')">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Concepto Fijo</button>
+                    <button type="submit" class="btn btn-primary">Guardar Fijo</button>
                 </div>
             </form>
         </div>

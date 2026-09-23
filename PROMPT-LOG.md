@@ -95,6 +95,11 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Quitar meta ≠ cancelar plan (diseño confirmado):** `eliminarMetaAhorro` (`public/app.js:1098`) solo borra la meta del mes; el plan vive en `planesAmortizacion` y `obtenerPlanAmortizacionActivo` (`:648`) lo sigue mostrando en los meses de cuota hasta `Saldar Deuda Anticipadamente` (`:728`). Se deja así a propósito.
 * **Errores detectados probando:** demo sin `formaPago` (filtros/etiquetas en blanco), demo sin déficit posible (las nóminas fijas de 4.000 €/mes siempre daban superávit), preset de septiembre (350 €) que bloqueaba cuotas menores del plan (reproducido: con cuota 132,87 € no se aplicaba; sin preset sí). Los tres se corrigieron solo con datos demo.
 
+### S8 — Reparto real entre miembros (23/09/2026, plan aprobado por la autora)
+* **Error detectado por Alejandra:** en "Gastos Compartidos" la app mostraba "Fijos" como un miembro, porque los recurrentes se inyectaban con `telefono: "Fijo"` y `esCompartido: true` forzados, y el reparto solo miraba gastos (nunca ingresos).
+* **Cambio (funcional, autorizado):** el fijo guarda miembro que paga/cobra + marca de compartido (Nueva Operación, modal de fijos y API en `server.js`); el mes respeta esos datos; el reparto incluye puntuales + fijos compartidos, gastos e ingresos, con deudas por concepto ("N le debe X a N2 en fijos: Netflix"), por categoría y liquidación total. Ingreso compartido al revés: quien lo cobra se lo debe a los demás. Pestaña renombrada a "Fijo". Fijos viejos sin miembro: se reparten a partes iguales sin generar deudas hasta que se les asigne miembro.
+* **Demo ajustada en datos:** recurrentes demo con miembro y compartido (hipoteca, seguro, fibra, luz y suscripciones compartidos; nóminas NO compartidas para no distorsionar el reparto). Verificado con `node --check` y simulación del reparto de agosto (Laura debe 1.896,30 € a Alejandro).
+
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
 * **IA:** generó ~90 % del código base, PWA, temas, CRUD, gráficos, Supabase, exports.
