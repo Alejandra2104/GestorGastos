@@ -327,8 +327,7 @@ app.post('/api/simular', (req, res) => {
             "2026-05": 300,
             "2026-06": 350,
             "2026-07": 400,
-            "2026-08": 300,
-            "2026-09": 350
+            "2026-08": 300
         },
         recurrentes: [
             { id: 1, concepto: "Hipoteca / Alquiler Piso", tipo: "gasto", dia: 1, cantidad: 850, categoria: "Vivienda", activo: true },

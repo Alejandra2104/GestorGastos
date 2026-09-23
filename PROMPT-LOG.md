@@ -89,7 +89,7 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 
 ### S6 — Demo actualizada a la lógica nueva (23/09/2026, solo datos, sin tocar código funcional)
 * Pedido por Alejandra: los datos de prueba estaban bajo la lógica anterior (sin `efectivo/tarjeta` y sin ejemplo de déficit).
-* Cambio: `formaPago` añadido a las 32 operaciones demo en `public/app.js` (`DATOS_DEMO`) y en `server.js` (`/api/simular`), mismo contenido en ambos. Nueva operación `id 132` (reforma baño 2.800 € en agosto) para que agosto dé balance −497,20 € frente a meta 300 € → déficit 797,20 € y se pueda probar el plan de recuperación con arrastre de base al mes siguiente. Verificado con `node --check` y cálculo de balance.
+* Cambio: `formaPago` añadido a las 32 operaciones demo en `public/app.js` (`DATOS_DEMO`) y en `server.js` (`/api/simular`), mismo contenido en ambos. Nueva operación `id 132` (reforma baño 2.800 € en agosto) para que agosto dé balance −497,20 € frente a meta 300 € → déficit 797,20 € y se pueda probar el plan de recuperación con arrastre de base al mes siguiente. Septiembre queda sin meta preset en la demo para que la cuota del plan se aplique como base sin depender de los meses elegidos (antes la meta 350 bloqueaba cuotas menores). Verificado con `node --check` y cálculo de balance.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
