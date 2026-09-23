@@ -1336,9 +1336,7 @@ function renderSpikeBanner() {
         const nombreMesAnt = nombresMeses[mesAnt - 1];
         document.getElementById('lblSpikeTexto').innerHTML =
             cambios.map(c => {
-                const signo = c.diff > 0 ? '+' : '';
-                const palabra = c.diff > 0 ? 'más' : 'menos';
-                return `En <strong>"${c.cat}"</strong> habéis gastado <strong>${c.gastado.toFixed(2)} €</strong> (${signo}${c.diff.toFixed(2)} € ${palabra} que en ${nombreMesAnt}).`;
+                return `En <strong>"${c.cat}"</strong> habéis gastado <strong>${c.diff.toFixed(2)} € más que en ${nombreMesAnt}</strong>.`;
             }).join('<br>');
     } else {
         bannerSpike.style.display = 'none';
