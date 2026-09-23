@@ -34,13 +34,13 @@ const DATOS_DEMO = {
         "2026-07": 400, "2026-08": 300
     },
     recurrentes: [
-        { id: 1, concepto: "Hipoteca / Alquiler Piso", tipo: "gasto", dia: 1, cantidad: 850, categoria: "Vivienda", telefono: "600111222", esCompartido: true, activo: true },
-        { id: 2, concepto: "Nómina Fija Alejandro", tipo: "ingreso", dia: 1, cantidad: 2150, categoria: "Banco y Seguros", telefono: "600111222", esCompartido: false, activo: true },
-        { id: 3, concepto: "Nómina Fija Laura", tipo: "ingreso", dia: 2, cantidad: 1850, categoria: "Banco y Seguros", telefono: "600333444", esCompartido: false, activo: true },
-        { id: 4, concepto: "Seguro de Hogar & Coche", tipo: "gasto", dia: 5, cantidad: 55, categoria: "Banco y Seguros", telefono: "600111222", esCompartido: true, activo: true },
-        { id: 5, concepto: "Fibra Óptica 1Gb + Móviles", tipo: "gasto", dia: 10, cantidad: 45, categoria: "Suministros", telefono: "600333444", esCompartido: true, activo: true },
-        { id: 6, concepto: "Factura Eléctrica", tipo: "gasto", dia: 15, cantidad: 75, categoria: "Suministros", telefono: "600333444", esCompartido: true, activo: true },
-        { id: 7, concepto: "Suscripciones (Streaming/Gym)", tipo: "gasto", dia: 20, cantidad: 38, categoria: "Ocio y Actividades", telefono: "600111222", esCompartido: true, activo: true }
+        { id: 1, concepto: "Hipoteca / Alquiler Piso", tipo: "gasto", dia: 1, cantidad: 850, categoria: "Vivienda", telefono: "600111222", esCompartido: true, formaPago: "tarjeta", activo: true },
+        { id: 2, concepto: "Nómina Fija Alejandro", tipo: "ingreso", dia: 1, cantidad: 2150, categoria: "Banco y Seguros", telefono: "600111222", esCompartido: false, formaPago: "tarjeta", activo: true },
+        { id: 3, concepto: "Nómina Fija Laura", tipo: "ingreso", dia: 2, cantidad: 1850, categoria: "Banco y Seguros", telefono: "600333444", esCompartido: false, formaPago: "tarjeta", activo: true },
+        { id: 4, concepto: "Seguro de Hogar & Coche", tipo: "gasto", dia: 5, cantidad: 55, categoria: "Banco y Seguros", telefono: "600111222", esCompartido: true, formaPago: "tarjeta", activo: true },
+        { id: 5, concepto: "Fibra Óptica 1Gb + Móviles", tipo: "gasto", dia: 10, cantidad: 45, categoria: "Suministros", telefono: "600333444", esCompartido: true, formaPago: "tarjeta", activo: true },
+        { id: 6, concepto: "Factura Eléctrica", tipo: "gasto", dia: 15, cantidad: 75, categoria: "Suministros", telefono: "600333444", esCompartido: true, formaPago: "efectivo", activo: true },
+        { id: 7, concepto: "Suscripciones (Streaming/Gym)", tipo: "gasto", dia: 20, cantidad: 38, categoria: "Ocio y Actividades", telefono: "600111222", esCompartido: true, formaPago: "tarjeta", activo: true }
     ],
     transacciones: [
         { id: 101, telefono: "600111222", tipo: "ingreso", concepto: "Bonus puntual", categoria: "Banco y Seguros", cantidad: 300, esCompartido: false, formaPago: "tarjeta", fecha: "2026-03-05T09:30:00.000Z" },
@@ -521,6 +521,7 @@ function obtenerOperacionesMes(anio, mesNum1Indexed) {
                 cantidad: r.cantidad,
                 esCompartido: !!r.esCompartido,
                 esFijo: true,
+                formaPago: r.formaPago || '',
                 fecha: fechaFijo.toISOString()
             });
         }
@@ -1810,6 +1811,7 @@ function renderRecurrentes() {
                     </span>
                     <div style="margin-top: 4px; display: flex; gap: 6px; flex-wrap: wrap;">
                         ${r.esCompartido ? '<span class="pill-tag pill-shared">👥 Compartido</span>' : '<span class="pill-tag" style="background: #f3f4f6; color: #6b7280;">🔒 No compartido</span>'}
+                        ${r.formaPago === 'efectivo' ? '<span class="pill-tag pill-pago" style="background: #f3f4f6; color: #6b7280; font-size: 0.75rem;">💵 Efectivo</span>' : r.formaPago === 'tarjeta' ? '<span class="pill-tag pill-pago" style="background: #f3f4f6; color: #6b7280; font-size: 0.75rem;">💳 Tarjeta</span>' : ''}
                     </div>
                 </div>
             </div>
@@ -1984,45 +1986,6 @@ function renderSplit() {
             lineas.push(`<div style="opacity: 0.75;">➗ <strong>${op.concepto}</strong> (${eur(op.cantidad)}) sin miembro asignado: repartido a partes iguales, no genera deudas.</div>`);
         });
         contConcept.innerHTML = lineas.length ? lineas.join('') : '<span style="opacity: 0.7;">Sin deudas por concepto este mes.</span>';
-    }
-
-    // Deudas por categoría (puntuales + fijos juntos)
-    const contCat = document.getElementById('splitCategoryContainer');
-    if (contCat) {
-        const porCat = {};
-        compartidos.forEach(op => {
-            const c = op.categoria || 'General';
-            if (!porCat[c]) porCat[c] = { net: {}, tot: 0 };
-            const v = op.tipo === 'ingreso' ? -op.cantidad : op.cantidad;
-            porCat[c].tot += v;
-            const tel = op.telefono ? String(op.telefono) : null;
-            if (tel && miembros.includes(tel)) {
-                porCat[c].net[tel] = (porCat[c].net[tel] || 0) + v;
-            } else if (N > 0) {
-                miembros.forEach(m => { porCat[c].net[m] = (porCat[c].net[m] || 0) + v / N; });
-            }
-        });
-        const htmlCat = [];
-        Object.entries(porCat).forEach(([cat, d]) => {
-            const fair = N > 0 ? d.tot / N : 0;
-            const deud = [], acre = [];
-            miembros.forEach(m => {
-                const b = (d.net[m] || 0) - fair;
-                if (b < -0.01) deud.push({ m, debe: -b });
-                else if (b > 0.01) acre.push({ m, cobra: b });
-            });
-            const tr = [];
-            let ii = 0, jj = 0;
-            while (ii < deud.length && jj < acre.length) {
-                const c = Math.min(deud[ii].debe, acre[jj].cobra);
-                if (c > 0.01) tr.push(`<strong>${nombreDe(deud[ii].m)}</strong> le debe <strong>${eur(c)}</strong> a <strong>${nombreDe(acre[jj].m)}</strong>`);
-                deud[ii].debe -= c; acre[jj].cobra -= c;
-                if (deud[ii].debe <= 0.01) ii++;
-                if (acre[jj].cobra <= 0.01) jj++;
-            }
-            htmlCat.push(`<div>📂 <strong>${cat}</strong>: ${tr.length ? tr.join(' · ') : 'equilibrado.'}</div>`);
-        });
-        contCat.innerHTML = htmlCat.length ? htmlCat.join('') : '<span style="opacity: 0.7;">Sin movimientos compartidos este mes.</span>';
     }
 
     // Directorio de Miembros
@@ -2301,6 +2264,26 @@ async function guardarOperacion(e) {
         }
         guardarLocalmente();
         try { api(`/api/transaccion/${id}`, 'PUT', payload).catch(() => {}); } catch (e) {}
+    } else if (esFijo) {
+        // Solo la regla fija: no se crea operación puntual para no duplicar.
+        // El fijo aparece cada mes con su día vía la inyección mensual.
+        const diaFijo = parseInt(document.getElementById('opDiaFijo').value) || 1;
+        const nuevoRec = {
+            id: Date.now() + 1,
+            concepto,
+            tipo,
+            dia: diaFijo,
+            cantidad,
+            categoria,
+            telefono: telefono || null,
+            esCompartido: !!esCompartido,
+            formaPago: document.getElementById('opFormaPago').value || 'efectivo',
+            activo: true
+        };
+        estado.recurrentes.push(nuevoRec);
+        try { api('/api/recurrente', 'POST', nuevoRec).catch(() => {}); } catch (e) {}
+        guardarLocalmente();
+        mostrarToast('Fijo registrado: aparecerá cada mes con el día elegido', 'success');
     } else {
         const nuevaOp = {
             id: Date.now(),
@@ -2308,24 +2291,6 @@ async function guardarOperacion(e) {
         };
         estado.transacciones.push(nuevaOp);
         savedId = nuevaOp.id;
-
-        if (esFijo) {
-            const diaFijo = parseInt(document.getElementById('opDiaFijo').value) || 1;
-            const nuevoRec = {
-                id: Date.now() + 1,
-                concepto,
-                tipo,
-                dia: diaFijo,
-                cantidad,
-                categoria,
-                telefono: telefono || null,
-                esCompartido: !!esCompartido,
-                activo: true
-            };
-            estado.recurrentes.push(nuevoRec);
-            try { api('/api/recurrente', 'POST', nuevoRec).catch(() => {}); } catch (e) {}
-        }
-
         guardarLocalmente();
         try { api('/api/transaccion', 'POST', payload).catch(() => {}); } catch (e) {}
     }
@@ -2358,6 +2323,8 @@ async function guardarOperacion(e) {
 
     // Verificación: la operación tiene que estar en el mes visible tras guardar.
     // Si algo la sigue ocultando, se fuerza de nuevo y se avisa por consola/toast.
+    // (Si era solo fijo no hay puntual que verificar: ya se avisó al registrarlo.)
+    if (!esFijo) {
     try {
         const partesV = String(estado.mesSeleccionado).split('-').map(Number);
         const opsVisibles = obtenerOperacionesMes(partesV[0], partesV[1]);
@@ -2373,6 +2340,7 @@ async function guardarOperacion(e) {
         mostrarToast('Operación guardada con éxito', 'success');
     }
     try { if (savedId !== null && savedId !== undefined) resaltarMovimiento(savedId); } catch (e) {}
+    }
 }
 
 function resaltarMovimiento(idBuscado) {
@@ -2420,6 +2388,7 @@ function abrirModalRecurrente(prefill = {}) {
     document.getElementById('recDia').value = prefill.dia || 1;
     document.getElementById('recCategoria').value = prefill.categoria || 'Vivienda';
     document.getElementById('recTelefono').value = prefill.telefono || '';
+    document.getElementById('recFormaPago').value = prefill.formaPago || 'efectivo';
     document.getElementById('recEsCompartido').checked = !!prefill.esCompartido;
 
     abrirModal('modalRecurrente');
@@ -2435,8 +2404,9 @@ async function guardarRecurrente(e) {
     const categoria = document.getElementById('recCategoria').value;
     const telefono = document.getElementById('recTelefono') ? document.getElementById('recTelefono').value || null : null;
     const esCompartido = document.getElementById('recEsCompartido') ? document.getElementById('recEsCompartido').checked : false;
+    const formaPago = document.getElementById('recFormaPago') ? document.getElementById('recFormaPago').value || 'efectivo' : 'efectivo';
 
-    const payload = { tipo, cantidad, concepto, dia, categoria, telefono, esCompartido, activo: true };
+    const payload = { tipo, cantidad, concepto, dia, categoria, telefono, esCompartido, formaPago, activo: true };
 
     if (id) {
         const index = estado.recurrentes.findIndex(r => r.id == id);

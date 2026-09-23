@@ -485,13 +485,6 @@
                         <!-- Líneas "N le debe X a N2 en fijos: concepto" generadas por JS -->
                     </div>
                 </div>
-
-                <div class="card" style="margin-top: 12px;">
-                    <h3 style="font-size: 1rem; margin-bottom: 8px;">📂 Deudas por categoría</h3>
-                    <div id="splitCategoryContainer" style="display: flex; flex-direction: column; gap: 6px; font-size: 0.88rem;">
-                        <!-- Líneas por categoría generadas por JS -->
-                    </div>
-                </div>
             </div>
 
             <!-- Hogar compartido en la nube -->
@@ -821,11 +814,20 @@
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem;">
-                        <input type="checkbox" id="recEsCompartido" style="width: 18px; height: 18px;">
-                        <span>Compartido (entra en el reparto familiar)</span>
-                    </label>
+                <div class="form-row-2">
+                    <div class="form-group">
+                        <label class="form-label" for="recFormaPago">Forma de pago</label>
+                        <select id="recFormaPago" class="form-control">
+                            <option value="efectivo">Efectivo</option>
+                            <option value="tarjeta">Tarjeta</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: flex-end; padding-bottom: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem;">
+                            <input type="checkbox" id="recEsCompartido" style="width: 18px; height: 18px;">
+                            <span>Compartido (entra en el reparto familiar)</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="modal-footer">

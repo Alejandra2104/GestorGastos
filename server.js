@@ -142,7 +142,7 @@ app.delete('/api/transaccion/:id', (req, res) => {
 
 // Crear gasto/ingreso recurrente
 app.post('/api/recurrente', (req, res) => {
-    const { concepto, dia, cantidad, categoria, tipo, telefono, esCompartido } = req.body;
+    const { concepto, dia, cantidad, categoria, tipo, telefono, esCompartido, formaPago } = req.body;
     if (!concepto || cantidad === undefined || isNaN(parseFloat(cantidad))) {
         return res.status(400).json({ error: 'Concepto y cantidad válidos son obligatorios' });
     }
@@ -157,6 +157,7 @@ app.post('/api/recurrente', (req, res) => {
         categoria: categoria || 'Vivienda',
         telefono: telefono ? String(telefono).trim() : null,
         esCompartido: !!esCompartido,
+        formaPago: formaPago === 'tarjeta' ? 'tarjeta' : 'efectivo',
         activo: true
     };
 
@@ -168,7 +169,7 @@ app.post('/api/recurrente', (req, res) => {
 // Modificar recurrente
 app.put('/api/recurrente/:id', (req, res) => {
     const id = parseInt(req.params.id);
-    const { concepto, dia, cantidad, categoria, tipo, activo, telefono, esCompartido } = req.body;
+    const { concepto, dia, cantidad, categoria, tipo, activo, telefono, esCompartido, formaPago } = req.body;
     const datos = leerDatos();
 
     const index = datos.recurrentes.findIndex(r => r.id === id);
@@ -185,6 +186,7 @@ app.put('/api/recurrente/:id', (req, res) => {
     if (activo !== undefined) r.activo = !!activo;
     if (telefono !== undefined) r.telefono = telefono ? String(telefono).trim() : null;
     if (esCompartido !== undefined) r.esCompartido = !!esCompartido;
+    if (formaPago !== undefined) r.formaPago = formaPago === 'tarjeta' ? 'tarjeta' : 'efectivo';
 
     guardarDatos(datos);
     res.json({ success: true, recurrente: r });
@@ -334,13 +336,13 @@ app.post('/api/simular', (req, res) => {
             "2026-08": 300
         },
         recurrentes: [
-            { id: 1, concepto: "Hipoteca / Alquiler Piso", tipo: "gasto", dia: 1, cantidad: 850, categoria: "Vivienda", telefono: "600111222", esCompartido: true, activo: true },
-            { id: 2, concepto: "Nómina Fija Alejandro", tipo: "ingreso", dia: 1, cantidad: 2150, categoria: "Banco y Seguros", telefono: "600111222", esCompartido: false, activo: true },
-            { id: 3, concepto: "Nómina Fija Laura", tipo: "ingreso", dia: 2, cantidad: 1850, categoria: "Banco y Seguros", telefono: "600333444", esCompartido: false, activo: true },
-            { id: 4, concepto: "Seguro de Hogar & Coche", tipo: "gasto", dia: 5, cantidad: 55, categoria: "Banco y Seguros", telefono: "600111222", esCompartido: true, activo: true },
-            { id: 5, concepto: "Fibra Óptica 1Gb + Móviles", tipo: "gasto", dia: 10, cantidad: 45, categoria: "Suministros", telefono: "600333444", esCompartido: true, activo: true },
-            { id: 6, concepto: "Factura Eléctrica", tipo: "gasto", dia: 15, cantidad: 75, categoria: "Suministros", telefono: "600333444", esCompartido: true, activo: true },
-            { id: 7, concepto: "Suscripciones (Streaming/Gym)", tipo: "gasto", dia: 20, cantidad: 38, categoria: "Ocio y Actividades", telefono: "600111222", esCompartido: true, activo: true }
+            { id: 1, concepto: "Hipoteca / Alquiler Piso", tipo: "gasto", dia: 1, cantidad: 850, categoria: "Vivienda", telefono: "600111222", esCompartido: true, formaPago: "tarjeta", activo: true },
+            { id: 2, concepto: "Nómina Fija Alejandro", tipo: "ingreso", dia: 1, cantidad: 2150, categoria: "Banco y Seguros", telefono: "600111222", esCompartido: false, formaPago: "tarjeta", activo: true },
+            { id: 3, concepto: "Nómina Fija Laura", tipo: "ingreso", dia: 2, cantidad: 1850, categoria: "Banco y Seguros", telefono: "600333444", esCompartido: false, formaPago: "tarjeta", activo: true },
+            { id: 4, concepto: "Seguro de Hogar & Coche", tipo: "gasto", dia: 5, cantidad: 55, categoria: "Banco y Seguros", telefono: "600111222", esCompartido: true, formaPago: "tarjeta", activo: true },
+            { id: 5, concepto: "Fibra Óptica 1Gb + Móviles", tipo: "gasto", dia: 10, cantidad: 45, categoria: "Suministros", telefono: "600333444", esCompartido: true, formaPago: "tarjeta", activo: true },
+            { id: 6, concepto: "Factura Eléctrica", tipo: "gasto", dia: 15, cantidad: 75, categoria: "Suministros", telefono: "600333444", esCompartido: true, formaPago: "efectivo", activo: true },
+            { id: 7, concepto: "Suscripciones (Streaming/Gym)", tipo: "gasto", dia: 20, cantidad: 38, categoria: "Ocio y Actividades", telefono: "600111222", esCompartido: true, formaPago: "tarjeta", activo: true }
         ],
         transacciones: [
             // Marzo 2026
