@@ -16,7 +16,7 @@ Este MVP es una app familiar compartida, instalable y offline, que permite apunt
 
 * **Resumen:** balance neto mensual, ahorro anual, medias 12 meses, gastos fijos programados.
 * **Movimientos del mes:** añadir/editar/borrar gasto o ingreso con concepto, cantidad, categoría, fecha, forma de pago (efectivo/tarjeta), miembro y marca de compartido. Filtros por tipo, forma, categoría y miembro.
-* **Calendario:** movimientos por día, añadir a fecha concreta.
+* **Calendario:** movimientos por día, añadir a fecha concreta. Se ubica en el día y mes actuales por defecto (corrección pedida por la autora, la app no lo hacía).
 * **Gastos fijos:** conceptos recurrentes (hipoteca, nóminas, suministros, suscripciones) con día del mes.
 * **Reparto familiar:** cálculo automático de saldos compartidos por teléfono/miembro.
 * **Metas de ahorro:** meta editable por mes, reparto proporcional por % entre miembros (siempre suma 100 %), barra de progreso, aviso de déficit.
