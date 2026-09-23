@@ -341,49 +341,50 @@ app.post('/api/simular', (req, res) => {
         ],
         transacciones: [
             // Marzo 2026
-            { id: 101, telefono: "600111222", tipo: "ingreso", concepto: "Bonus puntual", categoria: "Banco y Seguros", cantidad: 300, esCompartido: false, fecha: "2026-03-05T09:30:00.000Z" },
-            { id: 102, telefono: "600111222", tipo: "gasto", concepto: "Supermercado Mensual Mercadona", categoria: "Alimentación", cantidad: 280, esCompartido: true, fecha: "2026-03-08T11:00:00.000Z" },
-            { id: 103, telefono: "600333444", tipo: "gasto", concepto: "Compra Frutería y Pescado", categoria: "Alimentación", cantidad: 95, esCompartido: true, fecha: "2026-03-12T17:20:00.000Z" },
-            { id: 104, telefono: "600111222", tipo: "gasto", concepto: "Gasolina Repsol", categoria: "Transporte", cantidad: 65, esCompartido: false, fecha: "2026-03-15T18:00:00.000Z" },
-            { id: 105, telefono: "600333444", tipo: "gasto", concepto: "Cena Aniversario", categoria: "Ocio y Actividades", cantidad: 110, esCompartido: true, fecha: "2026-03-20T21:30:00.000Z" },
+            { id: 101, telefono: "600111222", tipo: "ingreso", concepto: "Bonus puntual", categoria: "Banco y Seguros", cantidad: 300, esCompartido: false, formaPago: "tarjeta", fecha: "2026-03-05T09:30:00.000Z" },
+            { id: 102, telefono: "600111222", tipo: "gasto", concepto: "Supermercado Mensual Mercadona", categoria: "Alimentación", cantidad: 280, esCompartido: true, formaPago: "tarjeta", fecha: "2026-03-08T11:00:00.000Z" },
+            { id: 103, telefono: "600333444", tipo: "gasto", concepto: "Compra Frutería y Pescado", categoria: "Alimentación", cantidad: 95, esCompartido: true, formaPago: "efectivo", fecha: "2026-03-12T17:20:00.000Z" },
+            { id: 104, telefono: "600111222", tipo: "gasto", concepto: "Gasolina Repsol", categoria: "Transporte", cantidad: 65, esCompartido: false, formaPago: "efectivo", fecha: "2026-03-15T18:00:00.000Z" },
+            { id: 105, telefono: "600333444", tipo: "gasto", concepto: "Cena Aniversario", categoria: "Ocio y Actividades", cantidad: 110, esCompartido: true, formaPago: "tarjeta", fecha: "2026-03-20T21:30:00.000Z" },
 
             // Abril 2026
-            { id: 106, telefono: "600111222", tipo: "gasto", concepto: "Supermercado Carrefour", categoria: "Alimentación", cantidad: 320, esCompartido: true, fecha: "2026-04-06T10:15:00.000Z" },
-            { id: 107, telefono: "600333444", tipo: "gasto", concepto: "Revisión Coche ITV", categoria: "Transporte", cantidad: 140, esCompartido: true, fecha: "2026-04-14T12:00:00.000Z" },
-            { id: 108, telefono: "600111222", tipo: "gasto", concepto: "Farmacia y Vitaminas", categoria: "Salud y Cuidado", cantidad: 42, esCompartido: false, fecha: "2026-04-18T18:45:00.000Z" },
-            { id: 109, telefono: "600333444", tipo: "gasto", concepto: "Ropa entretiempo Zara", categoria: "Moda y Estética", cantidad: 85, esCompartido: false, fecha: "2026-04-22T16:30:00.000Z" },
+            { id: 106, telefono: "600111222", tipo: "gasto", concepto: "Supermercado Carrefour", categoria: "Alimentación", cantidad: 320, esCompartido: true, formaPago: "tarjeta", fecha: "2026-04-06T10:15:00.000Z" },
+            { id: 107, telefono: "600333444", tipo: "gasto", concepto: "Revisión Coche ITV", categoria: "Transporte", cantidad: 140, esCompartido: true, formaPago: "tarjeta", fecha: "2026-04-14T12:00:00.000Z" },
+            { id: 108, telefono: "600111222", tipo: "gasto", concepto: "Farmacia y Vitaminas", categoria: "Salud y Cuidado", cantidad: 42, esCompartido: false, formaPago: "efectivo", fecha: "2026-04-18T18:45:00.000Z" },
+            { id: 109, telefono: "600333444", tipo: "gasto", concepto: "Ropa entretiempo Zara", categoria: "Moda y Estética", cantidad: 85, esCompartido: false, formaPago: "tarjeta", fecha: "2026-04-22T16:30:00.000Z" },
 
             // Mayo 2026
-            { id: 110, telefono: "600111222", tipo: "gasto", concepto: "Supermercado Semanal", categoria: "Alimentación", cantidad: 310, esCompartido: true, fecha: "2026-05-04T11:00:00.000Z" },
-            { id: 111, telefono: "600333444", tipo: "gasto", concepto: "Escapada fin de semana", categoria: "Ocio y Actividades", cantidad: 220, esCompartido: true, fecha: "2026-05-16T19:00:00.000Z" },
-            { id: 112, telefono: "600111222", tipo: "gasto", concepto: "Gasolina Repsol", categoria: "Transporte", cantidad: 70, esCompartido: false, fecha: "2026-05-20T08:30:00.000Z" },
+            { id: 110, telefono: "600111222", tipo: "gasto", concepto: "Supermercado Semanal", categoria: "Alimentación", cantidad: 310, esCompartido: true, formaPago: "tarjeta", fecha: "2026-05-04T11:00:00.000Z" },
+            { id: 111, telefono: "600333444", tipo: "gasto", concepto: "Escapada fin de semana", categoria: "Ocio y Actividades", cantidad: 220, esCompartido: true, formaPago: "tarjeta", fecha: "2026-05-16T19:00:00.000Z" },
+            { id: 112, telefono: "600111222", tipo: "gasto", concepto: "Gasolina Repsol", categoria: "Transporte", cantidad: 70, esCompartido: false, formaPago: "efectivo", fecha: "2026-05-20T08:30:00.000Z" },
 
             // Junio 2026
-            { id: 113, telefono: "600111222", tipo: "ingreso", concepto: "Paga Extra Verano Alejandro", categoria: "Banco y Seguros", cantidad: 1200, esCompartido: false, fecha: "2026-06-25T10:00:00.000Z" },
-            { id: 114, telefono: "600111222", tipo: "gasto", concepto: "Supermercado Grande Mercadona", categoria: "Alimentación", cantidad: 340, esCompartido: true, fecha: "2026-06-08T12:00:00.000Z" },
-            { id: 115, telefono: "600333444", tipo: "gasto", concepto: "Billetes de tren vacaciones", categoria: "Transporte", cantidad: 160, esCompartido: true, fecha: "2026-06-18T14:30:00.000Z" },
-            { id: 116, telefono: "600111222", tipo: "gasto", concepto: "Gafas de sol y óptica", categoria: "Salud y Cuidado", cantidad: 95, esCompartido: false, fecha: "2026-06-22T17:15:00.000Z" },
+            { id: 113, telefono: "600111222", tipo: "ingreso", concepto: "Paga Extra Verano Alejandro", categoria: "Banco y Seguros", cantidad: 1200, esCompartido: false, formaPago: "tarjeta", fecha: "2026-06-25T10:00:00.000Z" },
+            { id: 114, telefono: "600111222", tipo: "gasto", concepto: "Supermercado Grande Mercadona", categoria: "Alimentación", cantidad: 340, esCompartido: true, formaPago: "tarjeta", fecha: "2026-06-08T12:00:00.000Z" },
+            { id: 115, telefono: "600333444", tipo: "gasto", concepto: "Billetes de tren vacaciones", categoria: "Transporte", cantidad: 160, esCompartido: true, formaPago: "tarjeta", fecha: "2026-06-18T14:30:00.000Z" },
+            { id: 116, telefono: "600111222", tipo: "gasto", concepto: "Gafas de sol y óptica", categoria: "Salud y Cuidado", cantidad: 95, esCompartido: false, formaPago: "tarjeta", fecha: "2026-06-22T17:15:00.000Z" },
 
             // Julio 2026
-            { id: 117, telefono: "600333444", tipo: "ingreso", concepto: "Paga Extra Laura", categoria: "Banco y Seguros", cantidad: 1100, esCompartido: false, fecha: "2026-07-02T10:00:00.000Z" },
-            { id: 118, telefono: "600111222", tipo: "gasto", concepto: "Supermercado Vacacional", categoria: "Alimentación", cantidad: 390, esCompartido: true, fecha: "2026-07-07T11:00:00.000Z" },
-            { id: 119, telefono: "600333444", tipo: "gasto", concepto: "Hotel y Alojamiento Playa", categoria: "Ocio y Actividades", cantidad: 550, esCompartido: true, fecha: "2026-07-15T12:00:00.000Z" },
-            { id: 120, telefono: "600111222", tipo: "gasto", concepto: "Comidas fuera de casa", categoria: "Ocio y Actividades", cantidad: 210, esCompartido: true, fecha: "2026-07-22T22:00:00.000Z" },
+            { id: 117, telefono: "600333444", tipo: "ingreso", concepto: "Paga Extra Laura", categoria: "Banco y Seguros", cantidad: 1100, esCompartido: false, formaPago: "tarjeta", fecha: "2026-07-02T10:00:00.000Z" },
+            { id: 118, telefono: "600111222", tipo: "gasto", concepto: "Supermercado Vacacional", categoria: "Alimentación", cantidad: 390, esCompartido: true, formaPago: "tarjeta", fecha: "2026-07-07T11:00:00.000Z" },
+            { id: 119, telefono: "600333444", tipo: "gasto", concepto: "Hotel y Alojamiento Playa", categoria: "Ocio y Actividades", cantidad: 550, esCompartido: true, formaPago: "tarjeta", fecha: "2026-07-15T12:00:00.000Z" },
+            { id: 120, telefono: "600111222", tipo: "gasto", concepto: "Comidas fuera de casa", categoria: "Ocio y Actividades", cantidad: 210, esCompartido: true, formaPago: "tarjeta", fecha: "2026-07-22T22:00:00.000Z" },
 
             // Agosto 2026 (Mes enriquecido)
-            { id: 121, telefono: "600111222", tipo: "gasto", concepto: "Supermercado Mercadona", categoria: "Alimentación", cantidad: 295.40, esCompartido: true, fecha: "2026-08-03T11:30:00.000Z" },
-            { id: 122, telefono: "600111222", tipo: "gasto", concepto: "Vestido Vintage Thrifting", categoria: "Moda y Estética", cantidad: 65.00, esCompartido: false, fecha: "2026-08-04T12:00:00.000Z" },
-            { id: 123, telefono: "600333444", tipo: "gasto", concepto: "Cena terraza con amigos", categoria: "Ocio y Actividades", cantidad: 115.50, esCompartido: true, fecha: "2026-08-08T22:15:00.000Z" },
-            { id: 124, telefono: "600111222", tipo: "gasto", concepto: "Gasolina Repsol viaje", categoria: "Transporte", cantidad: 82.00, esCompartido: true, fecha: "2026-08-12T09:45:00.000Z" },
-            { id: 125, telefono: "600333444", tipo: "gasto", concepto: "Compra semanal Lidl", categoria: "Alimentación", cantidad: 124.30, esCompartido: true, fecha: "2026-08-16T18:20:00.000Z" },
-            { id: 126, telefono: "600111222", tipo: "ingreso", concepto: "Venta objetos segunda mano Wallapop", categoria: "Otros", cantidad: 140.00, esCompartido: false, fecha: "2026-08-19T17:00:00.000Z" },
-            { id: 127, telefono: "600333444", tipo: "gasto", concepto: "Clínica Dental Higiene", categoria: "Salud y Cuidado", cantidad: 60.00, esCompartido: false, fecha: "2026-08-23T16:00:00.000Z" },
-            { id: 128, telefono: "600111222", tipo: "gasto", concepto: "Cine de verano y palomitas", categoria: "Ocio y Actividades", cantidad: 32.00, esCompartido: true, fecha: "2026-08-28T21:00:00.000Z" },
+            { id: 121, telefono: "600111222", tipo: "gasto", concepto: "Supermercado Mercadona", categoria: "Alimentación", cantidad: 295.40, esCompartido: true, formaPago: "tarjeta", fecha: "2026-08-03T11:30:00.000Z" },
+            { id: 122, telefono: "600111222", tipo: "gasto", concepto: "Vestido Vintage Thrifting", categoria: "Moda y Estética", cantidad: 65.00, esCompartido: false, formaPago: "efectivo", fecha: "2026-08-04T12:00:00.000Z" },
+            { id: 123, telefono: "600333444", tipo: "gasto", concepto: "Cena terraza con amigos", categoria: "Ocio y Actividades", cantidad: 115.50, esCompartido: true, formaPago: "tarjeta", fecha: "2026-08-08T22:15:00.000Z" },
+            { id: 124, telefono: "600111222", tipo: "gasto", concepto: "Gasolina Repsol viaje", categoria: "Transporte", cantidad: 82.00, esCompartido: true, formaPago: "efectivo", fecha: "2026-08-12T09:45:00.000Z" },
+            { id: 125, telefono: "600333444", tipo: "gasto", concepto: "Compra semanal Lidl", categoria: "Alimentación", cantidad: 124.30, esCompartido: true, formaPago: "tarjeta", fecha: "2026-08-16T18:20:00.000Z" },
+            { id: 126, telefono: "600111222", tipo: "ingreso", concepto: "Venta objetos segunda mano Wallapop", categoria: "Otros", cantidad: 140.00, esCompartido: false, formaPago: "efectivo", fecha: "2026-08-19T17:00:00.000Z" },
+            { id: 132, telefono: "600111222", tipo: "gasto", concepto: "Reforma baño imprevisto fontanero", categoria: "Vivienda", cantidad: 2800, esCompartido: true, formaPago: "tarjeta", fecha: "2026-08-20T10:00:00.000Z" },
+            { id: 127, telefono: "600333444", tipo: "gasto", concepto: "Clínica Dental Higiene", categoria: "Salud y Cuidado", cantidad: 60.00, esCompartido: false, formaPago: "tarjeta", fecha: "2026-08-23T16:00:00.000Z" },
+            { id: 128, telefono: "600111222", tipo: "gasto", concepto: "Cine de verano y palomitas", categoria: "Ocio y Actividades", cantidad: 32.00, esCompartido: true, formaPago: "efectivo", fecha: "2026-08-28T21:00:00.000Z" },
 
             // Septiembre 2026 (Mes actual)
-            { id: 129, telefono: "600111222", tipo: "gasto", concepto: "Material oficina y vuelta al cole", categoria: "Otros", cantidad: 85.00, esCompartido: true, fecha: "2026-09-02T10:30:00.000Z" },
-            { id: 130, telefono: "600333444", tipo: "gasto", concepto: "Supermercado Mensual Septiembre", categoria: "Alimentación", cantidad: 245.80, esCompartido: true, fecha: "2026-09-05T12:00:00.000Z" },
-            { id: 131, telefono: "600111222", tipo: "gasto", concepto: "Abono transporte mensual", categoria: "Transporte", cantidad: 32.50, esCompartido: false, fecha: "2026-09-07T08:15:00.000Z" }
+            { id: 129, telefono: "600111222", tipo: "gasto", concepto: "Material oficina y vuelta al cole", categoria: "Otros", cantidad: 85.00, esCompartido: true, formaPago: "tarjeta", fecha: "2026-09-02T10:30:00.000Z" },
+            { id: 130, telefono: "600333444", tipo: "gasto", concepto: "Supermercado Mensual Septiembre", categoria: "Alimentación", cantidad: 245.80, esCompartido: true, formaPago: "tarjeta", fecha: "2026-09-05T12:00:00.000Z" },
+            { id: 131, telefono: "600111222", tipo: "gasto", concepto: "Abono transporte mensual", categoria: "Transporte", cantidad: 32.50, esCompartido: false, formaPago: "tarjeta", fecha: "2026-09-07T08:15:00.000Z" }
         ]
     };
 

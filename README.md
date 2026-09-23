@@ -26,7 +26,7 @@ Este MVP es una app familiar compartida, instalable y offline, que permite apunt
 * **Copia de seguridad:** descarga/importación JSON, exportar a Excel/CSV por mes y por año, y copia personal en la nube por teléfono + PIN (`guardar_respaldo` / `obtener_respaldo` en `public/app.js`) que sobrevive al reset del dispositivo.
 * **PWA instalable en cualquier SO:** se pidió en Gemini para instalar la misma app en Windows, macOS, Linux, Android e iOS, con ventana propia y modo offline (`manifest.json`, `sw.js`, `offline.html`, iconos).
 * **Banners por sistema operativo (hecho con Pi):** `INSTRUCC-INST/banner-instrucciones.html` detecta Windows / Mac / iPhone-iPad / Android / Linux y explica cómo instalar + botones Instalar/Cerrar.
-* **Demo en 1 clic:** `Cargar Datos de Demostración` (marzo–septiembre 2026) + `Restablecer a 0`.
+* **Demo en 1 clic:** `Cargar Datos de Demostración` (marzo–septiembre 2026) + `Restablecer a 0`. Todas las operaciones demo llevan `efectivo/tarjeta` según la lógica actual, y agosto incluye un gasto extraordinario (reforma baño 2.800 €) para mostrar un déficit real frente a la meta y probar el plan de recuperación.
 
 ## 3. Stack
 
