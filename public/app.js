@@ -852,6 +852,7 @@ function renderMetaAhorro() {
         lblPorcentaje.textContent = 'Sin meta fijada';
         bannerCelebracion.style.display = 'none';
         bannerDeficit.style.display = 'none';
+        try { const sb = document.getElementById('sugerenciaAhorroBox'); if (sb) sb.style.display = 'none'; } catch (e) {}
         renderMetaCompartidaUI();
         return;
     }
@@ -866,6 +867,7 @@ function renderMetaAhorro() {
     if (balanceActual >= meta) {
         bannerCelebracion.style.display = 'block';
         bannerDeficit.style.display = 'none';
+        try { const sb2 = document.getElementById('sugerenciaAhorroBox'); if (sb2) sb2.style.display = 'none'; } catch (e) {}
 
         // Si hay plan activo y el superávit salda el saldo pendiente, autoliquidar
         if (planActivo && balanceActual - meta >= planActivo.saldoPendiente) {
@@ -883,6 +885,7 @@ function renderMetaAhorro() {
         document.getElementById('lblDeficitImporte').textContent = `${deficit.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €`;
         actualizarDesgloseDeficitUI();
         actualizarCalculoProrrateo();
+        try { renderSugerenciaAhorro(deficit); } catch (e) {}
     }
 
     renderMetaCompartidaUI();
@@ -959,6 +962,107 @@ function actualizarCalculoProrrateo() {
 
     lblDetalle.innerHTML = 
         `💡 Para absorber el desfase en <strong>${meses} meses</strong>, cada mes tendrá una cuota base de amortización de <strong>+${cuotaExtra.toFixed(2)} €/mes</strong>${desgloseCuota}. Si en ese plazo no se salda, se podrá prorrogar hasta 12 meses.`;
+}
+
+// ==========================================================================
+// PRUEBA (rama prueba-sugerencia-ahorro): sugerencia de ahorro por categorías
+// Si no se alcanza la meta, propone de qué categorías recortar el mes que
+// viene según tus hábitos (media de hasta 3 meses anteriores, solo
+// movimientos de gasto: ni ingresos ni fijos). No toca la demo ni el resto.
+// ==========================================================================
+
+function gastosMovimientosPorCategoria(anio, mesNum1Indexed) {
+    const mapa = {};
+    const clave = anio + '-' + String(mesNum1Indexed).padStart(2, '0');
+    (estado.transacciones || []).forEach(t => {
+        if (!t || t.tipo !== 'gasto' || typeof t.fecha !== 'string' || t.fecha.length < 7) return;
+        if (t.fecha.substring(0, 7) !== clave) return;
+        mapa[t.categoria] = (mapa[t.categoria] || 0) + t.cantidad;
+    });
+    return mapa;
+}
+
+function huboMovimientos(anio, mesNum1Indexed) {
+    const clave = anio + '-' + String(mesNum1Indexed).padStart(2, '0');
+    return (estado.transacciones || []).some(t => t && typeof t.fecha === 'string' && t.fecha.substring(0, 7) === clave);
+}
+
+function renderSugerenciaAhorro(deficit) {
+    const box = document.getElementById('sugerenciaAhorroBox');
+    if (!box) return;
+    if (!(deficit > 0)) {
+        box.style.display = 'none';
+        box.innerHTML = '';
+        return;
+    }
+    const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
+    const actual = gastosMovimientosPorCategoria(anio, mesNum);
+    const catsActuales = Object.entries(actual).sort((a, b) => b[1] - a[1]);
+    if (catsActuales.length === 0) {
+        box.style.display = 'block';
+        box.innerHTML = `💡 No hay gastos este mes donde recortar: la meta supera los ingresos. Convendría revisar la meta.`;
+        return;
+    }
+
+    // Hasta 3 meses anteriores con movimientos para la "media habitual".
+    const mesesPrev = [];
+    const cursor = new Date(anio, mesNum - 2, 1);
+    for (let i = 0; i < 3; i++) {
+        const a = cursor.getFullYear();
+        const m = cursor.getMonth() + 1;
+        if (huboMovimientos(a, m)) mesesPrev.push({ a, m });
+        cursor.setMonth(cursor.getMonth() - 1);
+    }
+
+    const recortes = [];
+    const puntuales = [];
+    catsActuales.forEach(([cat, gastado]) => {
+        if (mesesPrev.length === 0) {
+            puntuales.push({ cat, gastado });
+            return;
+        }
+        let suma = 0;
+        mesesPrev.forEach(({ a, m }) => {
+            suma += (gastosMovimientosPorCategoria(a, m)[cat] || 0);
+        });
+        const media = suma / mesesPrev.length;
+        if (media <= 0) {
+            puntuales.push({ cat, gastado });
+        } else {
+            const exceso = gastado - media;
+            if (exceso >= 0.01) recortes.push({ cat, gastado, media, exceso });
+        }
+    });
+    recortes.sort((a, b) => b.exceso - a.exceso);
+    puntuales.sort((a, b) => b.gastado - a.gastado);
+
+    let restante = deficit;
+    const elegidos = [];
+    recortes.forEach(r => {
+        if (restante <= 0.005) return;
+        const corte = Math.min(r.exceso, restante);
+        restante = Math.round((restante - corte) * 100) / 100;
+        elegidos.push({ cat: r.cat, corte, gastado: r.gastado, media: r.media });
+    });
+
+    let html = `💡 <strong>Para el mes que viene</strong> (faltan <strong>${deficit.toFixed(2)} €</strong>): `;
+    if (elegidos.length > 0) {
+        html += 'podrías recortar ' + elegidos.map(e =>
+            `<strong>${e.corte.toFixed(2)} € en ${e.cat}</strong> (gastaste ${e.gastado.toFixed(2)} €, tu media es ${e.media.toFixed(2)} €)`
+        ).join(' + ') + '. ';
+    }
+    if (puntuales.length > 0) {
+        const top = puntuales.slice(0, 3);
+        html += `Ojo: ${top.map(p => `<strong>${p.cat} (${p.gastado.toFixed(2)} €)</strong>`).join(', ')} fue puntual y no debería repetirse. `;
+    }
+    if (elegidos.length === 0 && puntuales.length === 0) {
+        html += 'gastaste dentro de tu media en todo: convendría revisar la meta. ';
+    }
+    if (restante > 0.005) {
+        html += `Aun recortando todo, faltarían <strong>${restante.toFixed(2)} €</strong>: convendría revisar la meta.`;
+    }
+    box.innerHTML = html;
+    box.style.display = 'block';
 }
 
 function alCambiarInputMetaAhorro() {
