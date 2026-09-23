@@ -2,7 +2,7 @@
 
 **Autora:** Alejandra Medina Bobadilla
 **Curso:** Vibe Coding e IA Generativa · **Profesor:** José Antonio Delgado Alfonso
-**Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`, v1.7.7)
+**Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`, v1.7.10)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
 **Memoria de sesiones con IA:** ver `PROMPT-LOG.md`
 
@@ -25,6 +25,7 @@ Este MVP es una app familiar compartida, instalable y offline, que permite apunt
 * **Hogar compartido en la nube (Supabase):** vincular teléfonos con un código (`public/nube.js` + `public/nube-config.js`, funciones `obtener_hogar` / `guardar_hogar`). Sin vínculo, todo sigue local.
 * **Copia de seguridad:** descarga/importación JSON, exportar a Excel/CSV por mes y por año, y copia personal en la nube por teléfono + PIN (`guardar_respaldo` / `obtener_respaldo` en `public/app.js`) que sobrevive al reset del dispositivo.
 * **PWA instalable en cualquier SO:** se pidió en Gemini para instalar la misma app en Windows, macOS, Linux, Android e iOS, con ventana propia y modo offline (`manifest.json`, `sw.js`, `offline.html`, iconos).
+* **Navegación móvil (ajuste pedido a Pi):** barra de pestañas (Resumen, Calendario, Fijo, Reparto, Ajustes) arriba en vez de abajo para usarla con el pulgar en el móvil.
 * **Banners por sistema operativo (hecho con Pi):** `INSTRUCC-INST/banner-instrucciones.html` detecta Windows / Mac / iPhone-iPad / Android / Linux y explica cómo instalar + botones Instalar/Cerrar.
 * **Demo en 1 clic:** `Cargar Datos de Demostración` (marzo–septiembre 2026) + `Restablecer a 0`. Todas las operaciones demo llevan `efectivo/tarjeta` según la lógica actual, y agosto incluye un gasto extraordinario (reforma baño 2.800 €) para mostrar un déficit real frente a la meta y probar el plan de recuperación. Si tras una actualización ves la lógica anterior, pulsa `Restablecer a 0` y `Cargar Datos` de nuevo (el navegador conserva la demo vieja) y recarga fuerte la página.
 
