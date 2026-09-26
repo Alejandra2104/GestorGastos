@@ -302,6 +302,11 @@ async function cargarDatosServidor() {
 
     inicializarSelectorMeses();
     actualizarVistas();
+    // Los desplegables de miembros (Nueva Operación / Fijos / Filtros) se
+    // construyeron vacíos en cargarSelectCategorias(); repoblarlos ahora que
+    // estado.usuarios ya tiene lo guardado (demo o personal), para no tener
+    // que pulsar "Guardar" en cada miembro tras reabrir la app.
+    try { if (typeof actualizarSelectUsuarios === 'function') actualizarSelectUsuarios(); } catch (e) {}
     actualizarIndicadorModo();
 
     // 2. Backend OPCIONAL en segundo plano (no bloquea, no sobrescribe, no es requisito)
