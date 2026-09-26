@@ -6,10 +6,10 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.8.0
+**Versión documentada:** v1.9.0
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
-> Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.8.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
+> Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.9.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
 
 ## Stack real (verificado en repo)
 
@@ -41,7 +41,7 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 |------|-------------|----------------|--------------------------------|
 | 1. Código inicial en local + PWA | Gemini | Generó la APP base: balance mensual, añadir gasto/ingreso, categorías, LocalStorage, diseño inicial + la convirtió en PWA (`manifest.json`, `sw.js`, iconos) para instalar en cualquier SO | Pidió expresamente que fuera instalable en Windows/Mac/Linux/Android/iOS, probó en local, detectó que faltaba visión familiar |
 | 2. Subida a GitHub + carpeta | Pi | Ayudó a correr el proyecto en GitHub, organizar `public/`, crear `deploy-pages.yml`, subir artefactos, conectar Supabase y ajustes estéticos (barra de pestañas arriba) | Decidió estructura `public/` como publicable, pidió la conexión a Supabase y la barra arriba para el móvil, verificó Pages |
-| 3. Retoques finales v1.4 → v1.8.0 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
+| 3. Retoques finales v1.4 → v1.9.0 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
 
 ## Sesiones reconstruidas desde `git log`
 
@@ -130,6 +130,12 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Causa:** `cargarSelectCategorias()` → `actualizarSelectUsuarios()` se ejecutaba con `estado.usuarios` aún vacío, y `cargarDatosServidor()` rellenaba `estado.usuarios` después sin repintar los desplegables. Cuando Supabase respondía bien, `aplicarEstado()` lo repintaba a los ~2,5 s y tapaba el fallo; si la nube fallaba, se veía. Por eso "no pasaba siempre".
 * **Cambio (autorizado):** en `cargarDatosServidor()` (`public/app.js`), tras `actualizarVistas()` se llama a `actualizarSelectUsuarios()` para repoblar `opTelefono` / `recTelefono` / `filterUsuario` con lo guardado (demo Laura + Alejandro o miembros propios). El botón Guardar queda solo para renombrar, no para activar.
 * **Regla pedida por la autora desde ahora:** con cualquier cambio funcional se sube siempre la versión visible + `?v=` (`style.css`, `app.js`, `nube.js` en `public/index.html`) + `CACHE_VERSION` en `public/sw.js` para forzar el aviso "Hay una nueva versión" en la PWA. Versión app → v1.8.0 (salto menor por arreglo visible; mejor que v1.7.13), SW → v1.8.11. Verificado con `node --check` y push a `main` (Pages redespliega solo `public/`).
+
+### S14 — Atajo a Miembros, gráfica por miembro y arranque a 0 (26/09/2026, v1.9.0)
+* **P3 pedido por Alejandra:** en Nueva Operación, si no hay miembros, el campo "Miembro que paga/cobra" muestra un aviso con botón "Ir a crear miembros" (`opSinMiembrosHint` en `public/index.html` + `irACrearMiembros()` en `public/app.js`: cierra el modal, va a Reparto Familiar y enfoca el teléfono). Solo sale con 0 miembros. Una vez guardados ya salen siempre en Nueva Operación (fix v1.8.0), también tras recuperar la copia personal o la del hogar (ambas restauraciones ya repintaban los desplegables).
+* **P4 pedido por Alejandra:** nueva tarjeta en Resumen "Gastos e Ingresos por Miembro" (`cardChartMiembros` + `renderChartMiembros()`): barras por miembro del mes seleccionado con leyenda de totales. Oculta con menos de 2 miembros.
+* **P5 pedido por Alejandra:** el cliente nuevo empieza con todo a 0 —`cargarDatosServidor()` ya no siembra `DATOS_DEMO` si no hay local (la demo sigue en Ajustes → "Cargar Datos de Demostración")—. Nuevo banner `demoDataBar` debajo del de instalación ("¿Quieres probar la app con datos ficticios? Vete a Ajustes → Cargar datos de demostración", con ir/cerrar y memoria `demo_data_dismissed`); solo sale con la app vacía. Deduplicado de banners de descarga: `instructBanner` solo se muestra si `pwaInstallBar` y la ayuda iOS siguen ocultos (retardo 3 s) —siempre 1 banner de instalación como máximo.
+* **Versión:** app → v1.9.0 (funcionalidades nuevas), SW → v1.8.12. Verificado con `node --check` y push a `main`.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 

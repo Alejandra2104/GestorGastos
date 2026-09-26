@@ -50,7 +50,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="style.css?v=1.8.0">
+    <link rel="stylesheet" href="style.css?v=1.9.0">
     <style>
       /* Banner de instalación PWA + estado offline (ligero, no depende de style.css) */
       #pwaInstallBar{display:none;position:sticky;top:0;z-index:900;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;padding:10px 14px;font-size:.88rem;box-shadow:0 4px 14px rgba(124,58,237,.4)}
@@ -61,6 +61,11 @@
       #pwaUpdateBar{display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:1200;background:#2b2144;color:#fff;padding:10px 14px;border-radius:12px;font-size:.85rem;box-shadow:0 10px 25px rgba(0,0,0,.3);gap:10px;align-items:center}
       #pwaUpdateBar button{background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer}
       #offlineBadge{display:none;position:fixed;bottom:16px;right:16px;z-index:1200;background:#92400e;color:#fef3c7;padding:8px 12px;border-radius:999px;font-size:.78rem;font-weight:700}
+      #demoDataBar{display:none;background:linear-gradient(135deg,#fef9c3,#fde68a);color:#854d0e;padding:10px 14px;font-size:.85rem;border-bottom:1px solid #fcd34d}
+      #demoDataBar .row{max-width:1100px;margin:0 auto;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+      #demoDataBar button{border:none;border-radius:999px;padding:8px 16px;font-weight:800;cursor:pointer;font-size:.82rem}
+      #demoDataGo{background:#854d0e;color:#fff}
+      #demoDataClose{background:rgba(133,77,14,.15);color:#854d0e}
       #iosHelp{display:none;position:fixed;inset:auto 12px 12px 12px;z-index:1200;background:#fff;color:#2b2144;border:1px solid #e3d7fb;border-radius:14px;padding:14px;font-size:.85rem;box-shadow:0 20px 40px rgba(0,0,0,.2)}
       body.dark-mode #iosHelp{background:#1e1740;color:#f5f0ff;border-color:#3b2f6b}
       #modoBadge{display:inline-block;margin-top:4px;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:999px;background:#ede4ff;color:#5b21b6;border:1px solid #d9c8ff}
@@ -88,6 +93,17 @@
         <span style="display:flex;gap:8px">
           <button id="pwaInstallBtn">Instalar app</button>
           <button id="pwaDismissBtn" aria-label="Cerrar">✕</button>
+        </span>
+      </div>
+    </div>
+
+    <!-- Banner de datos de prueba (solo app vacía): ocupa el hueco del segundo banner -->
+    <div id="demoDataBar" role="note">
+      <div class="row">
+        <span>🧪 <strong>¿Quieres probar la app con datos ficticios?</strong> Vete a Ajustes → <strong>Cargar datos de demostración</strong>.</span>
+        <span style="display:flex;gap:8px">
+          <button id="demoDataGo" onclick="irABannerDemoAjustes()">Ir a Ajustes</button>
+          <button id="demoDataClose" aria-label="Cerrar" onclick="cerrarBannerDemo()">✕</button>
         </span>
       </div>
     </div>
@@ -363,6 +379,20 @@
                     <div style="display: flex; justify-content: center; gap: 16px; margin-top: 14px; font-size: 0.82rem; font-weight: 600;">
                         <span style="color: var(--success);">■ Ingresos</span>
                         <span style="color: var(--danger);">■ Gastos</span>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Barras por Miembro (solo con 2+ miembros) -->
+                <div class="card" id="cardChartMiembros" style="display:none;">
+                    <div class="card-header">
+                        <h2 class="card-title">👥 Gastos e Ingresos por Miembro</h2>
+                        <span class="card-subtitle" id="lblTotalMiembros">Mes actual</span>
+                    </div>
+                    <div class="chart-wrapper" id="containerChartMiembros">
+                        <!-- SVG interactivo generado por JS -->
+                    </div>
+                    <div class="categories-legend-list" id="legendMiembrosList">
+                        <!-- Leyenda por miembro -->
                     </div>
                 </div>
             </section>
@@ -654,7 +684,7 @@
                 <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
 
                 <p style="font-size:.8rem;color:var(--text-secondary);margin:0">
-                    📦 Versión <strong>1.8.0</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
+                    📦 Versión <strong>1.9.0</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
                 </p>
             </div>
         </main>
@@ -717,6 +747,12 @@
                     <select id="opTelefono" class="form-control">
                         <!-- Opciones de teléfonos/usuarios -->
                     </select>
+                    <div id="opSinMiembrosHint" style="display:none;margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--primary-surface);border:1px dashed var(--primary-light);font-size:.82rem;line-height:1.5;">
+                        👥 Aún no tienes miembros registrados. Créalos en <strong>Reparto Familiar → Miembros</strong> y aparecerán aquí siempre.
+                        <div style="margin-top:8px;">
+                            <button type="button" class="btn btn-primary" style="padding:8px 14px;font-size:.82rem;" onclick="irACrearMiembros()">➕ Ir a crear miembros</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -865,9 +901,9 @@
     </div>
 
     <!-- Script Principal de la Aplicación -->
-    <script src="app.js?v=1.8.0"></script>
+    <script src="app.js?v=1.9.0"></script>
     <script src="nube-config.js"></script>
-    <script src="nube.js?v=1.8.0"></script>
+    <script src="nube.js?v=1.9.0"></script>
     <script>
     // Lógica de instalación PWA separada del negocio (funciona en todos los navegadores)
     (function(){
@@ -987,8 +1023,18 @@
       }
       instructSteps.innerHTML = msg;
 
-      // Mostrar el banner después de un breve delay para no interrumpir la carga
-      setTimeout(() => { instructBanner.style.display = 'block'; }, 1500);
+      // Mostrar el banner con retardo y solo si no hay ya otro banner de
+      // instalación visible (pwaInstallBar o ayuda iOS): solo 1 a la vez.
+      setTimeout(() => {
+        try {
+          const otroBar = document.getElementById('pwaInstallBar');
+          const ayudaIOS = document.getElementById('iosHelp');
+          const otroVisible = (otroBar && otroBar.style.display === 'block') ||
+                              (ayudaIOS && ayudaIOS.style.display === 'block');
+          if (otroVisible) return;
+        } catch (e) {}
+        instructBanner.style.display = 'block';
+      }, 3000);
 
       // Cerrar banner (recuerda la preferencia)
       if (instructClose) {

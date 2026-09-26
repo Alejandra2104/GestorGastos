@@ -292,11 +292,12 @@ async function cargarDatosServidor() {
     // 1. LOCAL PRIMERO: render inmediato, sin esperar red. Independiente del servidor.
     const tieneLocal = cargarLocalmente();
     if (!tieneLocal) {
-        // Inicializar con la base de datos de ejemplo si no hay local
-        estado.transacciones = JSON.parse(JSON.stringify(DATOS_DEMO.transacciones));
-        estado.recurrentes = JSON.parse(JSON.stringify(DATOS_DEMO.recurrentes));
-        estado.metasPorMes = JSON.parse(JSON.stringify(DATOS_DEMO.metasPorMes));
-        estado.usuarios = JSON.parse(JSON.stringify(DATOS_DEMO.usuarios));
+        // P5: un cliente nuevo empieza con todo a 0 (sin demo por defecto).
+        // La demo sigue disponible en Ajustes → "Cargar Datos de Demostración".
+        estado.transacciones = [];
+        estado.recurrentes = [];
+        estado.metasPorMes = {};
+        estado.usuarios = {};
         guardarLocalmente();
     }
 
@@ -545,6 +546,44 @@ function actualizarVistas() {
     renderRecurrentes();
     renderSplit();
     try { if (typeof refrescarRespaldoPersonalUI === 'function') refrescarRespaldoPersonalUI(); } catch (e) {}
+    try { if (typeof actualizarBannerDemo === 'function') actualizarBannerDemo(); } catch (e) {}
+}
+
+// ==========================================================================
+// Banner P5: si la app está vacía (cliente nuevo, todo a 0), sugerir probar
+// con datos ficticios desde Ajustes. Se puede cerrar y no vuelve a salir.
+// ==========================================================================
+
+function appEstaVacia() {
+    try {
+        const sinTx = !estado.transacciones || estado.transacciones.length === 0;
+        const sinRec = !estado.recurrentes || estado.recurrentes.length === 0;
+        const sinMiembros = !estado.usuarios || Object.keys(estado.usuarios).length === 0;
+        return sinTx && sinRec && sinMiembros;
+    } catch (e) {
+        return false;
+    }
+}
+
+function actualizarBannerDemo() {
+    try {
+        const bar = document.getElementById('demoDataBar');
+        if (!bar) return;
+        const cerrado = localStorage.getItem('demo_data_dismissed') === '1';
+        bar.style.display = (!cerrado && appEstaVacia()) ? 'block' : 'none';
+    } catch (e) {}
+}
+
+function cerrarBannerDemo() {
+    try {
+        localStorage.setItem('demo_data_dismissed', '1');
+        const bar = document.getElementById('demoDataBar');
+        if (bar) bar.style.display = 'none';
+    } catch (e) {}
+}
+
+function irABannerDemoAjustes() {
+    try { cambiarTab('ajustes'); } catch (e) {}
 }
 
 // ==========================================================================
@@ -1595,6 +1634,87 @@ function renderCharts() {
             ${barsHtml}
         </svg>
     `;
+
+    // 3. Gráfico por miembro (solo con 2+ miembros registrados)
+    try { renderChartMiembros(ops); } catch (e) {}
+}
+
+// ==========================================================================
+// Gráfico P4: gastos e ingresos del mes por cada miembro registrado.
+// Oculto si hay menos de 2 miembros (no hay nada que comparar).
+// ==========================================================================
+
+function renderChartMiembros(ops) {
+    const card = document.getElementById('cardChartMiembros');
+    const container = document.getElementById('containerChartMiembros');
+    const legend = document.getElementById('legendMiembrosList');
+    const lbl = document.getElementById('lblTotalMiembros');
+    if (!card || !container || !legend) return;
+
+    const miembros = Object.keys(estado.usuarios || {});
+    if (miembros.length < 2) {
+        card.style.display = 'none';
+        container.innerHTML = '';
+        legend.innerHTML = '';
+        return;
+    }
+    card.style.display = '';
+
+    const datos = miembros.map(tel => {
+        let ing = 0, gas = 0;
+        (ops || []).forEach(op => {
+            if (!op || String(op.telefono || '') !== String(tel)) return;
+            if (op.tipo === 'ingreso') ing += op.cantidad;
+            else gas += op.cantidad;
+        });
+        return { tel, nombre: (estado.usuarios && estado.usuarios[tel]) || tel, ingresos: ing, gastos: gas };
+    });
+
+    const maxVal = Math.max(1, ...datos.map(d => Math.max(d.ingresos, d.gastos)));
+    if (lbl) {
+        const totalG = datos.reduce((s, d) => s + d.gastos, 0);
+        const totalI = datos.reduce((s, d) => s + d.ingresos, 0);
+        lbl.textContent = `Gastos ${totalG.toFixed(2)} € · Ingresos ${totalI.toFixed(2)} €`;
+    }
+
+    const rowH = 52, labelW = 110, barMaxW = 150, svgW = labelW + barMaxW + 70;
+    const svgH = datos.length * rowH + 10;
+    let rowsHtml = '';
+    datos.forEach((d, idx) => {
+        const y = idx * rowH + 8;
+        const wIng = Math.max(3, (d.ingresos / maxVal) * barMaxW);
+        const wGas = Math.max(3, (d.gastos / maxVal) * barMaxW);
+        const nombreCorto = String(d.nombre).length > 14 ? String(d.nombre).substring(0, 13) + '…' : d.nombre;
+        rowsHtml += `
+            <text x="0" y="${y + 15}" font-size="12" font-weight="700" fill="var(--text-primary)">${nombreCorto}</text>
+            <rect x="${labelW}" y="${y}" width="${wIng}" height="14" rx="4" fill="var(--success)" opacity="0.9">
+                <title>${d.nombre}: ingresos ${d.ingresos.toFixed(2)} €</title>
+            </rect>
+            <text x="${labelW + wIng + 6}" y="${y + 12}" font-size="11" font-weight="600" fill="var(--text-secondary)">${Math.round(d.ingresos)} €</text>
+            <rect x="${labelW}" y="${y + 19}" width="${wGas}" height="14" rx="4" fill="var(--danger)" opacity="0.9">
+                <title>${d.nombre}: gastos ${d.gastos.toFixed(2)} €</title>
+            </rect>
+            <text x="${labelW + wGas + 6}" y="${y + 31}" font-size="11" font-weight="600" fill="var(--text-secondary)">${Math.round(d.gastos)} €</text>
+        `;
+    });
+
+    container.innerHTML = `
+        <svg viewBox="0 0 ${svgW} ${svgH}" width="100%" height="${svgH}">
+            ${rowsHtml}
+        </svg>
+    `;
+    legend.innerHTML = datos.map(d => `
+        <div class="legend-item">
+            <div style="display: flex; align-items: center;">
+                <span>👤 ${d.nombre}</span>
+            </div>
+            <div>
+                <strong style="color: var(--success);">+${d.ingresos.toFixed(2)} €</strong>
+                <span style="color: var(--text-muted); margin: 0 4px;">/</span>
+                <strong style="color: var(--danger);">-${d.gastos.toFixed(2)} €</strong>
+            </div>
+        </div>
+    `).join('');
 }
 
 // ==========================================================================
@@ -2292,6 +2412,11 @@ function abrirModalOperacion(prefill = {}) {
     } else {
         document.getElementById('opTelefono').value = prefill.telefono || '';
     }
+    // Sin miembros: mostrar el atajo a Reparto Familiar → Miembros.
+    try {
+        const hint = document.getElementById('opSinMiembrosHint');
+        if (hint) hint.style.display = userKeys.length === 0 ? 'block' : 'none';
+    } catch (e) {}
     document.getElementById('opTipo').value = prefill.tipo || 'gasto';
     document.getElementById('opCantidad').value = prefill.cantidad || '';
     document.getElementById('opConcepto').value = prefill.concepto || '';
@@ -2313,6 +2438,20 @@ function abrirModalOperacion(prefill = {}) {
     document.getElementById('opcionesFijoContainer').style.display = 'none';
 
     abrirModal('modalOperacion');
+}
+
+// Atajo P3: desde Nueva Operación sin miembros, llevar a Reparto Familiar → Miembros.
+function irACrearMiembros() {
+    cerrarModal('modalOperacion');
+    cambiarTab('split');
+    try {
+        setTimeout(() => {
+            const form = document.getElementById('formAddUsuario');
+            if (form && form.scrollIntoView) form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const tel = document.getElementById('newTelInput');
+            if (tel) tel.focus({ preventScroll: true });
+        }, 150);
+    } catch (e) {}
 }
 
 function toggleOpcionesFijo() {
