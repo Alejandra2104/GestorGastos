@@ -6,10 +6,10 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.7.12
+**Versión documentada:** v1.8.0
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
-> Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.7.12), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
+> Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.8.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
 
 ## Stack real (verificado en repo)
 
@@ -41,7 +41,7 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 |------|-------------|----------------|--------------------------------|
 | 1. Código inicial en local + PWA | Gemini | Generó la APP base: balance mensual, añadir gasto/ingreso, categorías, LocalStorage, diseño inicial + la convirtió en PWA (`manifest.json`, `sw.js`, iconos) para instalar en cualquier SO | Pidió expresamente que fuera instalable en Windows/Mac/Linux/Android/iOS, probó en local, detectó que faltaba visión familiar |
 | 2. Subida a GitHub + carpeta | Pi | Ayudó a correr el proyecto en GitHub, organizar `public/`, crear `deploy-pages.yml`, subir artefactos, conectar Supabase y ajustes estéticos (barra de pestañas arriba) | Decidió estructura `public/` como publicable, pidió la conexión a Supabase y la barra arriba para el móvil, verificó Pages |
-| 3. Retoques finales v1.4 → v1.7.12 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
+| 3. Retoques finales v1.4 → v1.8.0 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
 
 ## Sesiones reconstruidas desde `git log`
 
@@ -124,6 +124,12 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Idea de Alejandra:** si no se alcanza la meta del mes, que la app sugiera de qué categorías ahorrar y cuánto para el mes siguiente, aprendiendo de los hábitos de gasto.
 * **Implementación (solo con datos que la app ya guarda, sin IA externa):** nueva caja `sugerenciaAhorroBox` en el banner de déficit (`public/index.html`) + `renderSugerenciaAhorro` (`public/app.js`). Con el déficit ya calculado, reparte recortes por exceso sobre la media de hasta 3 meses anteriores (solo movimientos de gasto: ni ingresos ni fijos), detecta puntuales sin historial (p. ej. reforma 2.800 € en Vivienda) y avisa si ni recortando todo se cubre ("convendría revisar la meta"). Si no hay gastos ese mes, lo dice en vez de sugerir.
 * **Prueba dirigida por la autora:** rama aparte sin tocar `main` ni la demo (`DATOS_DEMO` intacta); probada en local con la demo de agosto (déficit 797,20 €: sugiere Alimentación 73,03 € + Salud 28,33 € + Transporte 5,33 €, marca Vivienda/Moda como puntuales y avisa de 690,51 € restantes); aprobada y fusionada con subida de versión + SW (`v1.8.10`).
+
+### S13 — Miembros directos en Nueva Operación + regla de versión en cada cambio (26/09/2026, v1.8.0)
+* **Fallo detectado por Alejandra:** los miembros salían en "Miembros registrados" pero el desplegable de Nueva Operación quedaba vacío tras cerrar y abrir la app; había que pulsar "Guardar" en cada miembro para poder operar.
+* **Causa:** `cargarSelectCategorias()` → `actualizarSelectUsuarios()` se ejecutaba con `estado.usuarios` aún vacío, y `cargarDatosServidor()` rellenaba `estado.usuarios` después sin repintar los desplegables. Cuando Supabase respondía bien, `aplicarEstado()` lo repintaba a los ~2,5 s y tapaba el fallo; si la nube fallaba, se veía. Por eso "no pasaba siempre".
+* **Cambio (autorizado):** en `cargarDatosServidor()` (`public/app.js`), tras `actualizarVistas()` se llama a `actualizarSelectUsuarios()` para repoblar `opTelefono` / `recTelefono` / `filterUsuario` con lo guardado (demo Laura + Alejandro o miembros propios). El botón Guardar queda solo para renombrar, no para activar.
+* **Regla pedida por la autora desde ahora:** con cualquier cambio funcional se sube siempre la versión visible + `?v=` (`style.css`, `app.js`, `nube.js` en `public/index.html`) + `CACHE_VERSION` en `public/sw.js` para forzar el aviso "Hay una nueva versión" en la PWA. Versión app → v1.8.0 (salto menor por arreglo visible; mejor que v1.7.13), SW → v1.8.11. Verificado con `node --check` y push a `main` (Pages redespliega solo `public/`).
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
