@@ -1,5 +1,5 @@
 /* Gestor de Gastos — Service Worker PWA (offline-first, multi-plataforma) */
-const CACHE_VERSION = 'gestor-gastos-v1.8.19';
+const CACHE_VERSION = 'gestor-gastos-v1.8.20';
 const STATIC_CACHE = CACHE_VERSION + '-static';
 const RUNTIME_CACHE = CACHE_VERSION + '-runtime';
 

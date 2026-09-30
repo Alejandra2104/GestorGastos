@@ -745,6 +745,11 @@ function migrarPlanViejo(plan) {
         plan.cuotasPorMes = {};
         (plan.mesesLista || []).forEach(m => { plan.cuotasPorMes[m] = plan.cuotaMensual || 0; });
     }
+    // Cuánto puso cada mes origen en el bote (para no duplicar al repetir Aplicar).
+    if (!plan.origenes || typeof plan.origenes !== 'object') {
+        plan.origenes = {};
+        if (plan.mesOrigen && Number(plan.deficitTotal) > 0) plan.origenes[plan.mesOrigen] = redondear2(plan.deficitTotal);
+    }
     return plan;
 }
 
@@ -1496,8 +1501,15 @@ async function aplicarPlanProrrateo() {
     const saldoViejo = planViejo ? redondear2(planViejo.saldoPendiente) : 0;
     const acumViejo = planViejo ? redondear2(Number(planViejo.deficitTotalAcumulado !== undefined ? planViejo.deficitTotalAcumulado : planViejo.deficitTotal) || 0) : 0;
     const pagosViejos = planViejo && planViejo.pagosAplicados ? Object.assign({}, planViejo.pagosAplicados) : {};
+    // Repetir Aplicar desde el mismo mes no duplica: se resta lo que ese mes ya
+    // puso en el bote (ej: julio dos veces: 150-150+150=150). Un desfase nuevo de
+    // otro mes sí se suma una vez (octubre nunca puso: 85+100).
+    const mapaOr = planViejo && planViejo.origenes ? planViejo.origenes : {};
+    const yaPuesto = planViejo ? redondear2(Number(mapaOr[estado.mesSeleccionado]) || 0) : 0;
+    const origenesNuevos = Object.assign({}, mapaOr);
+    origenesNuevos[estado.mesSeleccionado] = redondear2(dineroNuevo);
     // Deuda total restante (incluye lo que se pagará este mes).
-    const totalNuevo = redondear2(saldoViejo + dineroNuevo);
+    const totalNuevo = redondear2(saldoViejo - yaPuesto + dineroNuevo);
     // A repartir en los meses frescos: se descuenta la meta de este mes porque ya
     // se pagará aquí (ej: 150+25-100=75 a repartir; 100 de ago + 75 = 175 exactos).
     // Sin cobertura no se descuenta nada (la meta de julio es otro objetivo aparte).
@@ -1556,13 +1568,14 @@ async function aplicarPlanProrrateo() {
         id: 'plan_' + Date.now(),
         mesOrigen: estado.mesSeleccionado,
         deficitTotal: redondear2(dineroNuevo),
-        deficitTotalAcumulado: redondear2(acumViejo + dineroNuevo),
+        deficitTotalAcumulado: redondear2(acumViejo - yaPuesto + dineroNuevo),
         saldoPendiente: totalNuevo,
         mesesPlazoOriginal: meses,
         mesesPlazo: meses,
         cuotaMensual: cuotaMedia,
         cuotasPorMes: Object.assign({}, mapaExacto),
         pagosAplicados: pagosViejos,
+        origenes: origenesNuevos,
         mesesLista: mesesLista,
         reparto: Object.assign({}, obtenerRepartoMes(estado.mesSeleccionado)),
         estado: 'activo',

@@ -6,7 +6,7 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.9.7
+**Versión documentada:** v1.9.8
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
 > Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.9.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
@@ -41,7 +41,7 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 |------|-------------|----------------|--------------------------------|
 | 1. Código inicial en local + PWA | Gemini | Generó la APP base: balance mensual, añadir gasto/ingreso, categorías, LocalStorage, diseño inicial + la convirtió en PWA (`manifest.json`, `sw.js`, iconos) para instalar en cualquier SO | Pidió expresamente que fuera instalable en Windows/Mac/Linux/Android/iOS, probó en local, detectó que faltaba visión familiar |
 | 2. Subida a GitHub + carpeta | Pi | Ayudó a correr el proyecto en GitHub, organizar `public/`, crear `deploy-pages.yml`, subir artefactos, conectar Supabase y ajustes estéticos (barra de pestañas arriba) | Decidió estructura `public/` como publicable, pidió la conexión a Supabase y la barra arriba para el móvil, verificó Pages |
-| 3. Retoques finales v1.4 → v1.9.7 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
+| 3. Retoques finales v1.4 → v1.9.8 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
 
 ## Sesiones reconstruidas desde `git log`
 
@@ -170,6 +170,11 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Fallo:** al esconder el déficit en meses cubiertos se escondían también desglose y sugerencia (con datos reales no se veía dónde recortar).
 * **Cambio:** el banner de déficit (importe + desglose + sugerencia) sale siempre que falte ahorro; solo el botón de crear plan sigue la regla (sin plan / con extra / en prórroga sin controles).
 * **Versión:** app → v1.9.7, SW → v1.8.19. Verificado con `node --check` y push a `main`.
+
+### S21 — Aplicar no duplica v1.9.8 (30/09/2026, exigido por Alejandra)
+* **Fallo:** darle a Aplicar varias veces sumaba el déficit cada vez (150+150) en cualquier mes.
+* **Cambio:** el plan recuerda por mes cuánto puso (`origenes`): al repetir desde el mismo mes se resta antes de sumar (150−150+150=150); un desfase nuevo de otro mes se suma una vez. Crear un plan nuevo sigue igual.
+* **Versión:** app → v1.9.8, SW → v1.8.20. Verificado con `node --check` + simulación y push a `main`.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
