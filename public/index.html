@@ -50,7 +50,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="style.css?v=1.9.0">
+    <link rel="stylesheet" href="style.css?v=1.9.1">
     <style>
       /* Banner de instalación PWA + estado offline (ligero, no depende de style.css) */
       #pwaInstallBar{display:none;position:sticky;top:0;z-index:900;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;padding:10px 14px;font-size:.88rem;box-shadow:0 4px 14px rgba(124,58,237,.4)}
@@ -302,6 +302,22 @@
                             </div>
                         </div>
                         <div id="lblAmortDesgloseMiembros" class="amort-desglose-miembros"></div>
+                        <div id="lblAmortAportado" style="font-size:.82rem;margin-top:6px;color:var(--text-secondary);"></div>
+                        <div id="lblAmortRetraso" style="font-size:.82rem;margin-top:4px;font-weight:600;"></div>
+                        <div id="boxProrrogaFinal" style="display:none;margin-top:10px;padding:10px 12px;border:1px dashed var(--primary-light);border-radius:10px;background:rgba(124,58,237,.05);">
+                            <div style="font-size:.84rem;font-weight:700;color:var(--primary);">⏱️ El plan terminó y aún queda deuda. Elige prórroga:</div>
+                            <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+                                <select id="selectMesesProrrogaFinal" class="filter-select" style="min-width:100px;padding:4px 8px;">
+                                    <option value="2">2 meses</option>
+                                    <option value="4">4 meses</option>
+                                    <option value="6" selected>6 meses</option>
+                                    <option value="8">8 meses</option>
+                                    <option value="12">12 meses</option>
+                                </select>
+                                <button class="btn btn-outline" style="padding:5px 12px;font-size:.8rem;" onclick="aplicarProrrogaElegida()">Aplicar prórroga</button>
+                            </div>
+                            <div style="font-size:.78rem;color:var(--text-secondary);margin-top:6px;">La nueva cuota será lo que quede dividido entre los meses nuevos que elijas.</div>
+                        </div>
                     </div>
                 </div>
 
@@ -684,7 +700,7 @@
                 <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
 
                 <p style="font-size:.8rem;color:var(--text-secondary);margin:0">
-                    📦 Versión <strong>1.9.0</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
+                    📦 Versión <strong>1.9.1</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
                 </p>
             </div>
         </main>
@@ -901,9 +917,9 @@
     </div>
 
     <!-- Script Principal de la Aplicación -->
-    <script src="app.js?v=1.9.0"></script>
+    <script src="app.js?v=1.9.1"></script>
     <script src="nube-config.js"></script>
-    <script src="nube.js?v=1.9.0"></script>
+    <script src="nube.js?v=1.9.1"></script>
     <script>
     // Lógica de instalación PWA separada del negocio (funciona en todos los navegadores)
     (function(){

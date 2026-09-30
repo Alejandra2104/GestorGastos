@@ -1,4 +1,4 @@
-"""Genera el icono GG dorado sobre verde billete en todos los tamaños PWA/iOS/favicon."""
+"""Genera el icono GG blanco sobre morado (mismo diseño que antes) en todos los tamaños PWA/iOS/favicon."""
 from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
 
@@ -6,27 +6,28 @@ PUB = Path(__file__).resolve().parent.parent / "public"
 ICONS = PUB / "icons"
 GEORGIA = Path("C:/Windows/Fonts/georgiab.ttf")
 
-# Verde billete (degradado vertical) y dorado
-VERDE_ARRIBA = (11, 61, 32)
-VERDE_ABAJO = (6, 38, 20)
-LUZ_CENTRO = (27, 122, 67)
-DORADO = (240, 206, 115)
-DORADO_OSCURO = (122, 92, 20)
-LINEA_DORADA = (212, 175, 55)
+# Morado interfaz (degradado vertical) y blanco
+# Mismo morado que la app: --primary #7c3aed, degradado header #4c1d95 -> #7c3aed -> #a855f7
+MORADO_ARRIBA = (124, 58, 237)
+MORADO_ABAJO = (76, 29, 149)
+LUZ_CENTRO = (168, 85, 247)
+BLANCO = (255, 255, 255)
+SOMBRA = (46, 16, 101)
+LINEA_BLANCA = (255, 255, 255)
 
 BASE = 1024
 
 
 def fondo(size, redondear=True, margen_contenido=1.0):
-    """Degradado verde vertical + luz central. Si redondear, esquinas transparentes."""
+    """Degradado morado vertical + luz central. Si redondear, esquinas transparentes."""
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     # degradado por franjas
     grad = Image.new("RGB", (1, size))
     for y in range(size):
         t = y / max(size - 1, 1)
-        r = int(VERDE_ARRIBA[0] + (VERDE_ABAJO[0] - VERDE_ARRIBA[0]) * t)
-        g = int(VERDE_ARRIBA[1] + (VERDE_ABAJO[1] - VERDE_ARRIBA[1]) * t)
-        b = int(VERDE_ARRIBA[2] + (VERDE_ABAJO[2] - VERDE_ARRIBA[2]) * t)
+        r = int(MORADO_ARRIBA[0] + (MORADO_ABAJO[0] - MORADO_ARRIBA[0]) * t)
+        g = int(MORADO_ARRIBA[1] + (MORADO_ABAJO[1] - MORADO_ARRIBA[1]) * t)
+        b = int(MORADO_ARRIBA[2] + (MORADO_ABAJO[2] - MORADO_ARRIBA[2]) * t)
         grad.putpixel((0, y), (r, g, b))
     grad = grad.resize((size, size))
     # luz radial central
@@ -42,10 +43,10 @@ def fondo(size, redondear=True, margen_contenido=1.0):
 
     d = ImageDraw.Draw(img)
     m = int(size * 0.045)
-    # doble marco dorado estilo billete
-    d.rounded_rectangle([m, m, size - m, size - m], radius=int(size * 0.19), outline=LINEA_DORADA, width=max(2, size // 170))
+    # doble marco blanco estilo billete
+    d.rounded_rectangle([m, m, size - m, size - m], radius=int(size * 0.19), outline=LINEA_BLANCA, width=max(2, size // 170))
     m2 = int(size * 0.085)
-    d.rounded_rectangle([m2, m2, size - m2, size - m2], radius=int(size * 0.15), outline=LINEA_DORADA + (170,) if len(LINEA_DORADA) == 3 else LINEA_DORADA, width=max(1, size // 340))
+    d.rounded_rectangle([m2, m2, size - m2, size - m2], radius=int(size * 0.15), outline=LINEA_BLANCA + (170,) if len(LINEA_BLANCA) == 3 else LINEA_BLANCA, width=max(1, size // 340))
     if redondear:
         mask = Image.new("L", (size, size), 0)
         ImageDraw.Draw(mask).rounded_rectangle([0, 0, size, size], radius=int(size * 0.225), fill=255)
@@ -68,8 +69,8 @@ def texto_gg(img, escala=0.46):
     w, h = bb[2] - bb[0], bb[3] - bb[1]
     x, y = (size - w) / 2 - bb[0], (size - h) / 2 - bb[1]
     off = max(1, size // 300)
-    d.text((x + off, y + off), txt, font=font, fill=DORADO_OSCURO)
-    d.text((x, y), txt, font=font, fill=DORADO)
+    d.text((x + off, y + off), txt, font=font, fill=SOMBRA)
+    d.text((x, y), txt, font=font, fill=BLANCO)
     return img
 
 

@@ -6,7 +6,7 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.9.0
+**Versión documentada:** v1.9.1
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
 > Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.9.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
@@ -41,7 +41,7 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 |------|-------------|----------------|--------------------------------|
 | 1. Código inicial en local + PWA | Gemini | Generó la APP base: balance mensual, añadir gasto/ingreso, categorías, LocalStorage, diseño inicial + la convirtió en PWA (`manifest.json`, `sw.js`, iconos) para instalar en cualquier SO | Pidió expresamente que fuera instalable en Windows/Mac/Linux/Android/iOS, probó en local, detectó que faltaba visión familiar |
 | 2. Subida a GitHub + carpeta | Pi | Ayudó a correr el proyecto en GitHub, organizar `public/`, crear `deploy-pages.yml`, subir artefactos, conectar Supabase y ajustes estéticos (barra de pestañas arriba) | Decidió estructura `public/` como publicable, pidió la conexión a Supabase y la barra arriba para el móvil, verificó Pages |
-| 3. Retoques finales v1.4 → v1.9.0 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
+| 3. Retoques finales v1.4 → v1.9.1 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
 
 ## Sesiones reconstruidas desde `git log`
 
@@ -136,6 +136,14 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **P4 pedido por Alejandra:** nueva tarjeta en Resumen "Gastos e Ingresos por Miembro" (`cardChartMiembros` + `renderChartMiembros()`): barras por miembro del mes seleccionado con leyenda de totales. Oculta con menos de 2 miembros.
 * **P5 pedido por Alejandra:** el cliente nuevo empieza con todo a 0 —`cargarDatosServidor()` ya no siembra `DATOS_DEMO` si no hay local (la demo sigue en Ajustes → "Cargar Datos de Demostración")—. Nuevo banner `demoDataBar` debajo del de instalación ("¿Quieres probar la app con datos ficticios? Vete a Ajustes → Cargar datos de demostración", con ir/cerrar y memoria `demo_data_dismissed`); solo sale con la app vacía. Deduplicado de banners de descarga: `instructBanner` solo se muestra si `pwaInstallBar` y la ayuda iOS siguen ocultos (retardo 3 s) —siempre 1 banner de instalación como máximo.
 * **Versión:** app → v1.9.0 (funcionalidades nuevas), SW → v1.8.12. Verificado con `node --check` y push a `main`.
+
+### S15 — Amortización real v1.9.1 (30/09/2026, acordado con Alejandra, 5 puntos)
+* **P1 Descuento real:** antes el `saldoPendiente` nunca bajaba (solo liquidaba si el superávit de un mes cubría toda la deuda). Ahora `conciliarPlanesAlCambiarMes()` aplica cada mes cerrado: `saldo -= balance` (si ahorras 150€ de 600€ quedan 450€; si gastas 50€ de más sube a 650€; si lo dejas a 0 se mantiene). Si acabas antes, los meses siguientes quedan libres y se autoliquida.
+* **P2 Prórroga solo al final 2/4/6/8/12:** eliminado botón "prorrogar hasta 12" durante el plan y prórroga automática. Nuevo `boxProrrogaFinal` (`selectMesesProrrogaFinal` + `aplicarProrrogaElegida()`) que solo sale en `Mes N/N` o más allá con saldo. Cálculo corregido: `cuota = saldo / meses nuevos` (antes `saldo / 12 totales`).
+* **P3 Un solo plan:** `obtenerUnicoPlanVivo()` + fusión en `aplicarPlanProrrateo()`: si ya hay plan, el nuevo déficit se suma (`saldo += déficit`) y se recalcula cuota única sobre los meses futuros (no se crean planes solapados invisibles).
+* **P4 Céntimos exactos:** `repartirCuotasExactas()` reparte al céntimo (100€/6 = 4x16.67 + 2x16.66, suma 100€) vía `cuotasPorMes` por mes; tolerancia ≤0.05€ se da por saldada.
+* **P5 Pack siempre junto:** número + cartel + `Mes X/Y` + `Saldar` siempre a la vez; `liquidarPlanYLiberarMetas()` + `limpiarMetasFuturasDePlan()` borran metas huérfanas (antes quedaba el número sin cartel). Nuevo aviso `lblAmortAportado` (`llevas X de Y`) + `lblAmortRetraso` (`vas con X de retraso: este mes solo debes la cuota, al final se recalcula` / `vas adelantado` / `vas al día`). Si el plan termina con deuda, el banner pasa a "Plan terminado: queda saldo" con selector de prórroga.
+* **Versión:** app → v1.9.1, SW → v1.8.13. Verificado con `node --check` + simulación (100/6 exacto, 600-150=450, skip mantiene, -50 sube, prórroga 200/6=33.33) y push a `main`.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
