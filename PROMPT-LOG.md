@@ -6,7 +6,7 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.9.9
+**Versión documentada:** v1.9.10
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
 > Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.9.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
@@ -41,7 +41,7 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 |------|-------------|----------------|--------------------------------|
 | 1. Código inicial en local + PWA | Gemini | Generó la APP base: balance mensual, añadir gasto/ingreso, categorías, LocalStorage, diseño inicial + la convirtió en PWA (`manifest.json`, `sw.js`, iconos) para instalar en cualquier SO | Pidió expresamente que fuera instalable en Windows/Mac/Linux/Android/iOS, probó en local, detectó que faltaba visión familiar |
 | 2. Subida a GitHub + carpeta | Pi | Ayudó a correr el proyecto en GitHub, organizar `public/`, crear `deploy-pages.yml`, subir artefactos, conectar Supabase y ajustes estéticos (barra de pestañas arriba) | Decidió estructura `public/` como publicable, pidió la conexión a Supabase y la barra arriba para el móvil, verificó Pages |
-| 3. Retoques finales v1.4 → v1.9.9 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
+| 3. Retoques finales v1.4 → v1.9.10 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
 
 ## Sesiones reconstruidas desde `git log`
 
@@ -182,6 +182,11 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Fallo 2:** la demo (`id 101-124`, ej. `Supermercado Septiembre 250€`) se mezclaba con datos reales (`id 101-131`) al cargar demo vinculado o al vincular estando en demo.
 * **Cambio 2:** flag `gestor_modo_demo_v1` (`esModoDemo/marcaModoDemo`); `restablecerDatosSimulados` desvincula en silencio, limpia compartidos/planes/lápidas y no sube a la nube; `crearHogar/unirseHogar/marcarMiTelefono/recuperarRespaldoPersonal` bloquean estando en demo con `Estás en versión demo, resetea a 0 en Ajustes para no mezclar con tus datos de hogar`; `desvincularHogarSilencioso` limpia `timerSubida/reemplazarProxima`.
 * **Versión:** app → v1.9.9, SW → v1.8.21. Verificado con `node --check` y push a `main`.
+
+### S23 — Avisos pre-vínculo no viajan v1.9.10 (30/09/2026, pedido por Alejandra)
+* **Fallo:** lo borrado en local antes de vincularse se subía al unirse y avisaba al resto, cuando nunca fue del hogar.
+* **Cambio:** `crearHogar/unirseHogar` en `public/nube.js` descartan `_avisos` locales previos y reinician vistos; solo viajan y avisan los borrados ya vinculados.
+* **Versión:** app → v1.9.10, SW → v1.8.22. Verificado con `node --check` y push a `main`.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 

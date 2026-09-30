@@ -473,6 +473,10 @@ async function crearHogar() {
   if (!hayRed()) { toastNube('Sin conexión a internet.', 'danger'); return; }
   toastNube('Creando tu hogar…', 'info');
   try {
+    // Los avisos de borrados en local previos al vínculo no son del hogar
+    // y no deben viajar a la nube ni avisar a nadie: se descartan.
+    try { if (typeof estado !== 'undefined') estado._avisos = []; } catch (e) {}
+    try { guardarAvisosVistos({}); } catch (e) {}
     asegurarMiembro(f.telefono, f.nombre);
     var codigo = null;
     for (var i = 0; i < 5; i++) {
@@ -506,6 +510,10 @@ async function unirseHogar() {
   try {
     var remoto = await rpc('obtener_hogar', { codigo: f.codigo });
     if (!remoto) { toastNube('Código no encontrado. Revísalo.', 'danger'); return; }
+    // Lo borrado en local antes de vincularse no es del hogar: no se sube
+    // ni se avisa al resto. Solo cuenta lo borrado ya vinculado.
+    try { if (typeof estado !== 'undefined') estado._avisos = []; } catch (e) {}
+    try { guardarAvisosVistos({}); } catch (e) {}
     asegurarMiembro(f.telefono, f.nombre);
     var merged = mergeEstados(estadoActual(), remoto);
     guardarVinculo({ codigo: f.codigo, miembroTelefono: f.telefono, miembroNombre: f.nombre });
