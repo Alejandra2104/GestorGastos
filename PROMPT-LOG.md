@@ -6,7 +6,7 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.9.5
+**Versión documentada:** v1.9.4
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
 > Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.9.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
@@ -41,7 +41,7 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 |------|-------------|----------------|--------------------------------|
 | 1. Código inicial en local + PWA | Gemini | Generó la APP base: balance mensual, añadir gasto/ingreso, categorías, LocalStorage, diseño inicial + la convirtió en PWA (`manifest.json`, `sw.js`, iconos) para instalar en cualquier SO | Pidió expresamente que fuera instalable en Windows/Mac/Linux/Android/iOS, probó en local, detectó que faltaba visión familiar |
 | 2. Subida a GitHub + carpeta | Pi | Ayudó a correr el proyecto en GitHub, organizar `public/`, crear `deploy-pages.yml`, subir artefactos, conectar Supabase y ajustes estéticos (barra de pestañas arriba) | Decidió estructura `public/` como publicable, pidió la conexión a Supabase y la barra arriba para el móvil, verificó Pages |
-| 3. Retoques finales v1.4 → v1.9.5 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
+| 3. Retoques finales v1.4 → v1.9.4 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
 
 ## Sesiones reconstruidas desde `git log`
 
@@ -159,11 +159,6 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Pedidos:** (1) el `Saldo total pendiente` también debe moverse en vivo (metes 75 € debiendo 85 € y debe marcar 10 €); (2) a mitad de plan no debe ofrecerse otro plan para el desfase (lía: ¿los 10 € de agosto generan otro plan de N meses?) — el desfase debe acumularse y ajustarse en la prórroga final.
 * **Cambios:** `lblAmortSaldoPendiente` muestra `saldo - lo de este mes` en directo (igual en el banner final); en meses cubiertos por el plan se ocultan los controles `¿Deseáis amortizar este desfase en...?` + `Aplicar` y sale `📌 Este desfase de X € se acumula al plan actual y se ajustará en la prórroga` (se mantienen déficit, desglose y sugerencia); `aplicarPlanProrrateo()` rechaza crear plan en mes cubierto (el único camino es la prórroga final o la fusión desde meses no cubiertos).
 * **Versión:** app → v1.9.4, SW → v1.8.16. Verificado con `node --check` y push a `main`.
-
-### S19 — Doble conteo al volver de mes v1.9.5 (30/09/2026, fallo visto por Alejandra)
-* **Fallo:** en agosto con 65 € salía `Saldo 20 €` tras visitar septiembre y volver: al entrar en sep se aplicaban los 65 € (saldo 150→85) y al volver a ago se restaban otra vez (85−65=20). El saldo correcto es 85 € (150−65) y faltan 10 € este mes (75−65).
-* **Cambio:** lo en vivo solo resta lo aún no aplicado (`balance − ya aplicado`): al volver al mes marca 85 € y 65 de 150, igual que la primera vez. Misma corrección en aportado, saldo final y autoliquidación.
-* **Versión:** app → v1.9.5, SW → v1.8.17. Verificado con `node --check` + simulación y push a `main`.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
