@@ -1153,36 +1153,34 @@ function renderMetaAhorro() {
             }
         }
     } else {
-        // Regla del déficit: sale sin plan, con extra sobre la base o en prórroga.
-        // En plan normal cubierto (meta = base) NO sale: solo el plan.
+        // El banner de déficit (importe + desglose + sugerencia) sale siempre que
+        // falte ahorro: los datos no se esconden nunca. Solo el botón de crear
+        // plan sigue la regla: sin plan / con extra / nunca a mitad de plan normal.
         const cubre = !!planActivo;
         const esPror = cubre && !!planActivo.prorrogaActiva;
         const baseMes = cubre ? Number(cuotaDePlanParaMes(planActivo, estado.mesSeleccionado)) || 0 : 0;
         const hayExtra = cubre && meta > baseMes + 0.005;
-        const mostrarBanner = !cubre || hayExtra || esPror;
         const mostrarControles = !cubre || hayExtra;
         const prControls = document.getElementById('prorrateControls');
         const prDetalle = document.getElementById('lblProrrateoDetalle');
-        if (!mostrarBanner) {
-            bannerDeficit.style.display = 'none';
+        bannerCelebracion.style.display = 'none';
+        bannerDeficit.style.display = 'block';
+        const deficit = meta - balanceActual;
+        document.getElementById('lblDeficitImporte').textContent = `${deficit.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €`;
+        actualizarDesgloseDeficitUI();
+        if (mostrarControles) {
+            if (prControls) prControls.style.display = '';
+            actualizarCalculoProrrateo();
+        } else if (esPror) {
+            // En prórroga sin extra: el desfase se suma a la prórroga actual.
             if (prControls) prControls.style.display = 'none';
-            try { const sb3 = document.getElementById('sugerenciaAhorroBox'); if (sb3) sb3.style.display = 'none'; } catch (e) {}
+            if (prDetalle) prDetalle.innerHTML = `📌 Este desfase de <strong>${deficit.toFixed(2)} €</strong> se suma a la prórroga actual.`;
         } else {
-            bannerCelebracion.style.display = 'none';
-            bannerDeficit.style.display = 'block';
-            const deficit = meta - balanceActual;
-            document.getElementById('lblDeficitImporte').textContent = `${deficit.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €`;
-            actualizarDesgloseDeficitUI();
-            if (mostrarControles) {
-                if (prControls) prControls.style.display = '';
-                actualizarCalculoProrrateo();
-            } else {
-                // En prórroga sin extra: el desfase se suma a la prórroga actual.
-                if (prControls) prControls.style.display = 'none';
-                if (prDetalle) prDetalle.innerHTML = `📌 Este desfase de <strong>${deficit.toFixed(2)} €</strong> se suma a la prórroga actual.`;
-            }
-            try { renderSugerenciaAhorro(deficit); } catch (e) {}
+            // A mitad de plan normal: el desfase se acumula para la prórroga final.
+            if (prControls) prControls.style.display = 'none';
+            if (prDetalle) prDetalle.innerHTML = `📌 Este desfase de <strong>${deficit.toFixed(2)} €</strong> se acumula al plan actual y se ajustará en la prórroga al terminar. Este mes solo debes la cuota.`;
         }
+        try { renderSugerenciaAhorro(deficit); } catch (e) {}
     }
 
     renderMetaCompartidaUI();
@@ -1410,8 +1408,9 @@ function alCambiarInputMetaAhorro() {
         }
     });
 
-    // En mes cubierto, el déficit y sus controles aparecen en vivo al subir la meta
-    // sobre la base (y se esconden al volver a la base).
+    // En mes cubierto, el botón de crear plan aparece en vivo al subir la meta
+    // sobre la base (y se esconde al volver a la base). El banner con los datos
+    // no se esconde nunca: solo el botón sigue la regla.
     const planCubre = obtenerPlanAmortizacionActivo(estado.mesSeleccionado);
     if (planCubre && !planCubre.prorrogaActiva) {
         migrarPlanViejo(planCubre);
@@ -1429,7 +1428,6 @@ function alCambiarInputMetaAhorro() {
             }
             if (prControls) prControls.style.display = '';
         } else {
-            if (bannerDef) bannerDef.style.display = 'none';
             if (prControls) prControls.style.display = 'none';
         }
     }

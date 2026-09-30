@@ -6,7 +6,7 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.9.6
+**Versión documentada:** v1.9.7
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
 > Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.9.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
@@ -41,7 +41,7 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 |------|-------------|----------------|--------------------------------|
 | 1. Código inicial en local + PWA | Gemini | Generó la APP base: balance mensual, añadir gasto/ingreso, categorías, LocalStorage, diseño inicial + la convirtió en PWA (`manifest.json`, `sw.js`, iconos) para instalar en cualquier SO | Pidió expresamente que fuera instalable en Windows/Mac/Linux/Android/iOS, probó en local, detectó que faltaba visión familiar |
 | 2. Subida a GitHub + carpeta | Pi | Ayudó a correr el proyecto en GitHub, organizar `public/`, crear `deploy-pages.yml`, subir artefactos, conectar Supabase y ajustes estéticos (barra de pestañas arriba) | Decidió estructura `public/` como publicable, pidió la conexión a Supabase y la barra arriba para el móvil, verificó Pages |
-| 3. Retoques finales v1.4 → v1.9.6 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
+| 3. Retoques finales v1.4 → v1.9.7 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
 
 ## Sesiones reconstruidas desde `git log`
 
@@ -165,6 +165,11 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Bugs:** (1) aplicar con otros meses sumaba en vez de rehacer (6→2 se quedaba en 6); (2) cada clic duplicaba la deuda (150+150); (3) mes preseleccionado (6 por defecto).
 * **Cambios:** `aplicarPlanProrrateo()` REHACE el plan único con meses frescos (limpia cuotas viejas que ya no tocan, respeta el mes actual y lo quitado a mano); dinero nuevo contado una vez (sin plan: déficit entero; mes cubierto: solo el extra; resto: déficit entero); a repartir se descuenta la meta actual si cubre (150+25−100=75); desplegables sin defecto (`Elige meses…`, obligatorio). Déficit: sin plan / con extra / en prórroga; en plan normal cubierto no sale (solo el plan). Prórroga: `Plan terminó, quedan N €` + `Prorrogar`, que abre el bloque de julio (meses + Aplicar Plan de Recuperación). Trae de vuelta el fix del doble conteo al volver de mes (saldo 85, no 20).
 * **Versión:** app → v1.9.6, SW → v1.8.18. Verificado con `node --check` + simulación y push a `main`.
+
+### S20 — Datos siempre visibles v1.9.7 (30/09/2026, pedido por Alejandra)
+* **Fallo:** al esconder el déficit en meses cubiertos se escondían también desglose y sugerencia (con datos reales no se veía dónde recortar).
+* **Cambio:** el banner de déficit (importe + desglose + sugerencia) sale siempre que falte ahorro; solo el botón de crear plan sigue la regla (sin plan / con extra / en prórroga sin controles).
+* **Versión:** app → v1.9.7, SW → v1.8.19. Verificado con `node --check` y push a `main`.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
