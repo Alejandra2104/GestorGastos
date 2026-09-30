@@ -175,6 +175,37 @@ function marcarModoDemo(v) {
 }
 try { if (typeof window !== 'undefined') window.esModoDemo = esModoDemo; } catch (e) {}
 
+// Limpieza única de restos demo ya mezclados (solo coincidencia exacta
+// id+concepto+cantidad+fecha de DATOS_DEMO). No toca datos reales aunque
+// compartan id, porque el concepto/fecha demo son distintos.
+function limpiarRestosDemoExactos() {
+    try {
+        if (typeof esModoDemo === 'function' && esModoDemo()) return 0;
+        try {
+            if (localStorage.getItem('gestor_mig_demo_v1') === '1') return 0;
+        } catch (e) {}
+        if (typeof DATOS_DEMO === 'undefined' || !Array.isArray(DATOS_DEMO.transacciones)) return 0;
+        const firmas = new Set(DATOS_DEMO.transacciones.map(t =>
+            String(t.id) + '|' + String(t.concepto) + '|' + String(t.cantidad) + '|' + String(t.fecha)));
+        const antes = (estado.transacciones || []).length;
+        estado.transacciones = (estado.transacciones || []).filter(t => {
+            if (!t || t.id === undefined) return true;
+            const f = String(t.id) + '|' + String(t.concepto) + '|' + String(t.cantidad) + '|' + String(t.fecha);
+            if (!firmas.has(f)) return true;
+            try { if (typeof NUBE_marcarBorrado === 'function') NUBE_marcarBorrado('tx', t.id); } catch (e) {}
+            return false;
+        });
+        const quitados = antes - (estado.transacciones || []).length;
+        try { localStorage.setItem('gestor_mig_demo_v1', '1'); } catch (e) {}
+        if (quitados > 0) {
+            try { registrarAvisoBorrado('quitó ' + quitados + ' resto(s) de demo mezclados'); } catch (e) {}
+            guardarLocalmente();
+            try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
+        }
+        return quitados;
+    } catch (e) { return 0; }
+}
+
 // ==========================================================================
 // Avisos de borrado del hogar ("X quitó Y").
 // Si alguien quita algo se borra en ambos móviles, y al otro solo le sale
@@ -199,9 +230,17 @@ function registrarAvisoBorrado(textoCorto) {
         if (!textoCorto) return;
         if (!Array.isArray(estado._avisos)) estado._avisos = [];
         const quien = nombreQuienQuita();
+        let quienTel = null;
+        try {
+            if (typeof NUBE_hogarVinculado === 'function') {
+                const vv = NUBE_hogarVinculado();
+                if (vv && vv.miembroTelefono) quienTel = String(vv.miembroTelefono);
+            }
+        } catch (e) {}
         estado._avisos.push({
             id: 'av_' + Date.now() + '_' + Math.floor(Math.random() * 1e6),
             por: quien,
+            porTel: quienTel,
             texto: String(textoCorto).slice(0, 140),
             ts: Date.now()
         });
@@ -285,16 +324,25 @@ async function api(endpoint, method = 'GET', body = null) {
     }
 }
 
-function fusionarPorId(local, remoto) {
+function fusionarPorId(local, remoto, clase) {
     const mapa = new Map();
+    let borr = {};
+    try { borr = estado._borrados || {}; } catch (e) {}
     (local || []).forEach(x => { if (x && x.id !== undefined) mapa.set(String(x.id), x); });
-    (remoto || []).forEach(x => { if (x && x.id !== undefined && !mapa.has(String(x.id))) mapa.set(String(x.id), x); });
+    (remoto || []).forEach(x => {
+        if (!x || x.id === undefined || mapa.has(String(x.id))) return;
+        // Respetar lápidas: lo borrado no resucita desde el servidor.
+        try { if (clase && borr[clase + ':' + String(x.id)]) return; } catch (e) {}
+        mapa.set(String(x.id), x);
+    });
     // Conservar también elementos sin id (compatibilidad con datos antiguos)
     (local || []).forEach(x => { if (!x || x.id === undefined) mapa.set('local-' + Math.random(), x); });
     return Array.from(mapa.values());
 }
 
 async function probarBackendEnFondo() {
+    // La demo es solo local: no se mezcla con el servidor.
+    try { if (typeof esModoDemo === 'function' && esModoDemo()) { backendDisponible = false; actualizarIndicadorModo(); return; } } catch (e) {}
     if (!debeIntentarBackend()) {
         if (backendDisponible === null && esModoPortable()) backendDisponible = false;
         actualizarIndicadorModo();
@@ -321,8 +369,8 @@ async function probarBackendEnFondo() {
         backendDisponible = true;
         // Fusión sin pérdida: lo local manda, solo se añaden novedades del servidor
         const antes = JSON.stringify({ t: estado.transacciones.length, r: estado.recurrentes.length });
-        estado.transacciones = fusionarPorId(estado.transacciones, datos.transacciones);
-        estado.recurrentes = fusionarPorId(estado.recurrentes, datos.recurrentes || []);
+        estado.transacciones = fusionarPorId(estado.transacciones, datos.transacciones, 'tx');
+        estado.recurrentes = fusionarPorId(estado.recurrentes, datos.recurrentes || [], 'rec');
         estado.metasPorMes = Object.assign({}, datos.metasPorMes || {}, estado.metasPorMes);
         estado.usuarios = Object.assign({}, datos.usuarios || {}, estado.usuarios);
         const despues = JSON.stringify({ t: estado.transacciones.length, r: estado.recurrentes.length });
@@ -354,6 +402,14 @@ async function cargarDatosServidor() {
 
     inicializarSelectorMeses();
     actualizarVistas();
+    // Migración única: quitar restos demo ya mezclados (coincidencia exacta).
+    try {
+        const q = limpiarRestosDemoExactos();
+        if (q > 0) {
+            try { mostrarToast('Se quitaron ' + q + ' resto(s) de demo mezclados.', 'info'); } catch (e) {}
+            try { inicializarSelectorMeses(); actualizarVistas(); } catch (e) {}
+        }
+    } catch (e) {}
     // Los desplegables de miembros (Nueva Operación / Fijos / Filtros) se
     // construyeron vacíos en cargarSelectCategorias(); repoblarlos ahora que
     // estado.usuarios ya tiene lo guardado (demo o personal), para no tener
@@ -3447,8 +3503,7 @@ async function restablecerDatosSimulados() {
         estado._avisos = [];
         try { marcarModoDemo(true); } catch (e) {}
         guardarLocalmente();
-        // Sin subida a la nube: la demo es solo de este móvil.
-        api('/api/simular', 'POST').catch(() => {});
+        // Sin subida a la nube ni al servidor: la demo es solo de este móvil.
         mostrarToast('Demo cargada solo en este móvil (desvinculado del hogar para no mezclar).', 'info');
         inicializarSelectorMeses();
         actualizarSelectUsuarios();

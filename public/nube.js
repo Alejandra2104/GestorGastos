@@ -11,7 +11,7 @@
 var LS_HOGAR = 'gestor_hogar_v1';
 var LS_AVISOS_VISTOS = 'gestor_avisos_vistos_v1';
 var POLL_MS = 30000;
-var PRUNE_MS = 90 * 24 * 3600 * 1000;
+var PRUNE_MS = 180 * 24 * 3600 * 1000;
 var timerSubida = null;
 var reemplazarProxima = false;
 var rtClient = null;
@@ -413,12 +413,13 @@ function mostrarAvisosNuevos(merged) {
     var quien = av.por || 'Alguien del hogar';
     var que = av.texto || 'quitó algo';
     // No auto-avisar de lo que acabo de quitar yo en este dispositivo:
-    // el que borra ya vio su propio toast local.
+    // se compara por teléfono (único) con reserva al nombre para avisos viejos.
     try {
-      var yo = null;
+      var yoTel = null, yoNom = null;
       var vinc = leerVinculo();
-      if (vinc) yo = vinc.miembroNombre || vinc.miembroTelefono;
-      if (yo && quien === yo) return;
+      if (vinc) { yoTel = vinc.miembroTelefono ? String(vinc.miembroTelefono) : null; yoNom = vinc.miembroNombre || null; }
+      if (yoTel && av.porTel && String(av.porTel) === yoTel) return;
+      if (!av.porTel && yoNom && quien === yoNom) return;
     } catch (e) {}
     try { toastNube('👤 ' + quien + ' ' + que, 'info'); } catch (e) {}
     nuevos++;
