@@ -6,7 +6,7 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.9.1
+**Versión documentada:** v1.9.2
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
 > Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.9.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
@@ -41,7 +41,7 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 |------|-------------|----------------|--------------------------------|
 | 1. Código inicial en local + PWA | Gemini | Generó la APP base: balance mensual, añadir gasto/ingreso, categorías, LocalStorage, diseño inicial + la convirtió en PWA (`manifest.json`, `sw.js`, iconos) para instalar en cualquier SO | Pidió expresamente que fuera instalable en Windows/Mac/Linux/Android/iOS, probó en local, detectó que faltaba visión familiar |
 | 2. Subida a GitHub + carpeta | Pi | Ayudó a correr el proyecto en GitHub, organizar `public/`, crear `deploy-pages.yml`, subir artefactos, conectar Supabase y ajustes estéticos (barra de pestañas arriba) | Decidió estructura `public/` como publicable, pidió la conexión a Supabase y la barra arriba para el móvil, verificó Pages |
-| 3. Retoques finales v1.4 → v1.9.1 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
+| 3. Retoques finales v1.4 → v1.9.2 | Opencode | Aplicó cambios puntuales, temas, fixes, exportaciones | Dirigió cada bug y cada funcionalidad nueva, probó a mano, aceptó/rechazó |
 
 ## Sesiones reconstruidas desde `git log`
 
@@ -144,6 +144,11 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **P4 Céntimos exactos:** `repartirCuotasExactas()` reparte al céntimo (100€/6 = 4x16.67 + 2x16.66, suma 100€) vía `cuotasPorMes` por mes; tolerancia ≤0.05€ se da por saldada.
 * **P5 Pack siempre junto:** número + cartel + `Mes X/Y` + `Saldar` siempre a la vez; `liquidarPlanYLiberarMetas()` + `limpiarMetasFuturasDePlan()` borran metas huérfanas (antes quedaba el número sin cartel). Nuevo aviso `lblAmortAportado` (`llevas X de Y`) + `lblAmortRetraso` (`vas con X de retraso: este mes solo debes la cuota, al final se recalcula` / `vas adelantado` / `vas al día`). Si el plan termina con deuda, el banner pasa a "Plan terminado: queda saldo" con selector de prórroga.
 * **Versión:** app → v1.9.1, SW → v1.8.13. Verificado con `node --check` + simulación (100/6 exacto, 600-150=450, skip mantiene, -50 sube, prórroga 200/6=33.33) y push a `main`.
+
+### S16 — Demo presentación 5 min v1.9.2 (30/09/2026, pedida por Alejandra)
+* **Ideas pedidas:** la demo vieja (nóminas 4.000€, reforma 2.800€) daba balances de 2.500€ y no servía para contar la historia 300/150/75/65 ni cabía en 5 min. Se mantienen Alejandro y Laura, los 7 fijos (mismos conceptos/miembros/compartidos/pagos), categorías, reparto, gráficos por miembro, spike y sugerencia; solo se reescalan importes.
+* **Cambio (solo datos, `public/app.js` + `server.js` mismo contenido):** fijos base 520€ (nóminas 900+700, alquiler 900, seguro 50, fibra 40, luz 60, subs 30). Historia: Jun 300/300 verde; Jul 150/300 déficit 150€ (Alimentación 330 vs 180 = spike +150, Ocio 70 puntual, sugerencia recorte 150); plan 2 meses 75+75 Ago/Sep (presentadora lo crea en directo); Ago 65/75 (faltan 10, saldo 85, retraso 10); Sep 0/75 fin de plan (deuda 85, caja prórroga 2/4/6/8/12). Ramas Sep en directo: +85€ (balance 85, superávit 10, Saldar manual) y +100€ extra (balance 185, superávit 110, autoliquida). Mar-May en verde como fondo de medias. Ago/Sep sin meta preset para que el plan ponga la base.
+* **Verificación:** cálculo de balances (Mar 300, Abr 340, May 300, Jun 300, Jul 150, Ago 65, Sep 0), `node --check` app.js + server.js OK, versión + SW y push a `main`. Para verla: Ajustes → Restablecer a 0 → Cargar Datos.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
