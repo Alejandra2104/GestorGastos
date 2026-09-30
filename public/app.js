@@ -84,6 +84,9 @@ const estado = {
     repartoPredeterminado: {},
     usuarios: {},
     _borrados: {},
+    // Avisos de borrados para el hogar ("Alejandro quitó la meta de 2026-09").
+    // Se sincronizan por la nube y solo se muestran una vez por dispositivo.
+    _avisos: [],
     // Respaldo personal por teléfono + PIN (solo de este dispositivo: no se
     // sincroniza con el hogar para no mezclar identidades entre miembros).
     miTelefono: null,
@@ -116,6 +119,7 @@ function guardarLocalmente() {
             repartoPredeterminado: estado.repartoPredeterminado || {},
             usuarios: estado.usuarios,
             _borrados: estado._borrados || {},
+            _avisos: estado._avisos || [],
             miTelefono: estado.miTelefono || null,
             respaldoPIN: estado.respaldoPIN || null
         };
@@ -141,6 +145,7 @@ function cargarLocalmente() {
             if (parsed.repartoPredeterminado && typeof parsed.repartoPredeterminado === 'object') estado.repartoPredeterminado = parsed.repartoPredeterminado;
             if (parsed.usuarios && typeof parsed.usuarios === 'object') estado.usuarios = parsed.usuarios;
             if (parsed._borrados && typeof parsed._borrados === 'object') estado._borrados = parsed._borrados;
+            if (Array.isArray(parsed._avisos)) estado._avisos = parsed._avisos;
             if (typeof parsed.miTelefono === 'string' && parsed.miTelefono) estado.miTelefono = parsed.miTelefono;
             if (typeof parsed.respaldoPIN === 'string' && parsed.respaldoPIN) estado.respaldoPIN = parsed.respaldoPIN;
             return true;
@@ -149,6 +154,60 @@ function cargarLocalmente() {
         console.warn("No se pudo leer localStorage:", e);
     }
     return false;
+}
+
+// ==========================================================================
+// Modo demo: la demo es solo local y nunca debe mezclarse con el hogar.
+// Si se carga la demo estando vinculado, se desvincula en silencio.
+// Si se intenta vincular o recuperar estando en demo, se bloquea con aviso.
+// ==========================================================================
+var LS_MODO_DEMO = 'gestor_modo_demo_v1';
+
+function esModoDemo() {
+    try { return localStorage.getItem(LS_MODO_DEMO) === '1'; } catch (e) { return false; }
+}
+
+function marcarModoDemo(v) {
+    try {
+        if (v) localStorage.setItem(LS_MODO_DEMO, '1');
+        else localStorage.removeItem(LS_MODO_DEMO);
+    } catch (e) {}
+}
+try { if (typeof window !== 'undefined') window.esModoDemo = esModoDemo; } catch (e) {}
+
+// ==========================================================================
+// Avisos de borrado del hogar ("X quitó Y").
+// Si alguien quita algo se borra en ambos móviles, y al otro solo le sale
+// un aviso informativo una vez. No resucita lo borrado.
+// ==========================================================================
+function nombreQuienQuita() {
+    try {
+        if (typeof NUBE_hogarVinculado === 'function') {
+            const v = NUBE_hogarVinculado();
+            if (v && (v.miembroNombre || v.miembroTelefono)) return v.miembroNombre || v.miembroTelefono;
+        }
+    } catch (e) {}
+    try {
+        const tels = Object.keys(estado.usuarios || {});
+        if (tels.length === 1) return estado.usuarios[tels[0]] || 'Alguien';
+    } catch (e) {}
+    return 'Alguien del hogar';
+}
+
+function registrarAvisoBorrado(textoCorto) {
+    try {
+        if (!textoCorto) return;
+        if (!Array.isArray(estado._avisos)) estado._avisos = [];
+        const quien = nombreQuienQuita();
+        estado._avisos.push({
+            id: 'av_' + Date.now() + '_' + Math.floor(Math.random() * 1e6),
+            por: quien,
+            texto: String(textoCorto).slice(0, 140),
+            ts: Date.now()
+        });
+        // Solo los últimos 30 avisos para no engordar la nube.
+        if (estado._avisos.length > 30) estado._avisos = estado._avisos.slice(-30);
+    } catch (e) {}
 }
 
 // ==========================================================================
@@ -812,6 +871,14 @@ function limpiarMetasFuturasDePlan(plan, desdeMes) {
         if (estado.metasPorMes[m] === undefined) return;
         if (Math.abs(estado.metasPorMes[m] - porMes) < 0.005) {
             delete estado.metasPorMes[m];
+            // Marcar para que la cuota auto-creada no resucite desde la nube
+            // en el otro móvil. Si el usuario fija una meta real después,
+            // guardarMetaAhorro limpia esta marca.
+            try {
+                if (!estado.metasBorradas || typeof estado.metasBorradas !== 'object') estado.metasBorradas = {};
+                estado.metasBorradas[m] = true;
+            } catch (e) {}
+            try { if (typeof NUBE_marcarBorrado === 'function') NUBE_marcarBorrado('meta', m); } catch (e) {}
         } else if (estado.metasPorMes[m] > porMes) {
             const resto = redondear2(estado.metasPorMes[m] - porMes);
             if (resto > 0) estado.metasPorMes[m] = resto;
@@ -823,11 +890,16 @@ function limpiarMetasFuturasDePlan(plan, desdeMes) {
 
 function liquidarPlanYLiberarMetas(plan, mesReferencia, silencioso) {
     if (!plan) return;
-    plan.saldoPendiente = 0;
-    plan.estado = 'liquidado_anticipado';
-    plan.fechaLiquidacion = new Date().toISOString();
-    try { plan._mod = Date.now(); } catch (e) {}
+    // Si alguien lo quita se quita en ambos: se elimina + lápida para que
+    // la nube no lo resucite desde el otro móvil (antes se quedaba como
+    // "liquidado" y el otro dispositivo lo reactivaba al conciliar).
+    const idPlan = plan.id;
     limpiarMetasFuturasDePlan(plan, mesReferencia);
+    try {
+        estado.planesAmortizacion = (estado.planesAmortizacion || []).filter(p => p !== plan && p.id !== idPlan);
+    } catch (e) {}
+    try { if (typeof NUBE_marcarBorrado === 'function' && idPlan !== undefined) NUBE_marcarBorrado('plan', idPlan); } catch (e) {}
+    try { registrarAvisoBorrado('quitó el plan de amortización (' + (plan.saldoPendiente !== undefined ? Number(plan.saldoPendiente).toFixed(2) + ' €' : 'deuda') + ')'); } catch (e) {}
     guardarLocalmente();
     if (!silencioso) {
         try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
@@ -1543,6 +1615,11 @@ async function aplicarPlanProrrateo() {
             if (estado.metasPorMes[m] === undefined) return;
             if (Math.abs(estado.metasPorMes[m] - porMes) < 0.02) {
                 delete estado.metasPorMes[m];
+                try {
+                    if (!estado.metasBorradas || typeof estado.metasBorradas !== 'object') estado.metasBorradas = {};
+                    estado.metasBorradas[m] = true;
+                } catch (e) {}
+                try { if (typeof NUBE_marcarBorrado === 'function') NUBE_marcarBorrado('meta', m); } catch (e) {}
             } else if (estado.metasPorMes[m] > porMes) {
                 const resto = redondear2(estado.metasPorMes[m] - porMes);
                 if (resto > 0) estado.metasPorMes[m] = resto;
@@ -1550,6 +1627,8 @@ async function aplicarPlanProrrateo() {
             }
         });
         // El plan viejo queda sustituido por el nuevo (no se duplica la deuda).
+        // Lápida para que el viejo no resucite desde la nube del otro móvil.
+        try { if (typeof NUBE_marcarBorrado === 'function' && planViejo.id !== undefined) NUBE_marcarBorrado('plan', planViejo.id); } catch (e) {}
         estado.planesAmortizacion = (estado.planesAmortizacion || []).filter(p => p !== planViejo);
     }
 
@@ -1606,6 +1685,7 @@ async function guardarMetaAhorro() {
     // y anula la marca de "quitada manualmente" para ese mes.
     estado.metasPorMes[estado.mesSeleccionado] = nuevaMeta;
     try { if (estado.metasBorradas) delete estado.metasBorradas[estado.mesSeleccionado]; } catch (e) {}
+    try { if (typeof NUBE_limpiarBorrado === 'function') NUBE_limpiarBorrado('meta', estado.mesSeleccionado); } catch (e) {}
     guardarLocalmente();
     // Subida forzada para que el nuevo valor (y la limpieza de la marca)
     // lleguen a la nube de forma atómica.
@@ -1627,6 +1707,9 @@ function eliminarMetaAhorro() {
     // Sin meta no hay reparto compartido de ese mes: se limpia también para
     // que la casilla "Meta compartida" no quede marcada en vacío.
     try { if (estado.metasCompartidas) delete estado.metasCompartidas[estado.mesSeleccionado]; } catch (e) {}
+    // Lápidas para que el borrado llegue a ambos móviles y no resucite.
+    try { if (typeof NUBE_marcarBorrado === 'function') { NUBE_marcarBorrado('meta', estado.mesSeleccionado); NUBE_marcarBorrado('metacomp', estado.mesSeleccionado); } } catch (e) {}
+    try { registrarAvisoBorrado('quitó la meta de ahorro de ' + estado.mesSeleccionado); } catch (e) {}
     // Marcar el mes como quitado manualmente para que ni el plan de
     // amortización ni la nube vuelvan a reponer la meta automáticamente.
     try {
@@ -1657,14 +1740,22 @@ function toggleMetaCompartida() {
         if (!estado.metasCompartidas) estado.metasCompartidas = {};
         if (!estado.metasCompartidas[estado.mesSeleccionado]) {
             estado.metasCompartidas[estado.mesSeleccionado] = obtenerRepartoMes(estado.mesSeleccionado);
+            // Si se vuelve a activar tras un borrado, limpiar la lápida para
+            // que la nube lo acepte de nuevo en ambos móviles.
+            try { if (typeof NUBE_limpiarBorrado === 'function') NUBE_limpiarBorrado('metacomp', estado.mesSeleccionado); } catch (e) {}
             guardarLocalmente();
+            try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
         }
         renderMetaCompartidaUI();
     } else {
         sec.style.display = 'none';
         if (estado.metasCompartidas) {
             delete estado.metasCompartidas[estado.mesSeleccionado];
+            // Lápida: si alguien quita el reparto se quita en ambos y no resucita.
+            try { if (typeof NUBE_marcarBorrado === 'function') NUBE_marcarBorrado('metacomp', estado.mesSeleccionado); } catch (e) {}
+            try { registrarAvisoBorrado('quitó el reparto compartido de ' + estado.mesSeleccionado); } catch (e) {}
             guardarLocalmente();
+            try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
         }
         renderMetaAhorro();
     }
@@ -1791,6 +1882,7 @@ function ajustarPorcentajesReactivo(changedInput) {
     if (!estado.metasCompartidas) estado.metasCompartidas = {};
     estado.metasCompartidas[estado.mesSeleccionado] = nuevoReparto;
     estado.repartoPredeterminado = Object.assign({}, nuevoReparto);
+    try { if (typeof NUBE_limpiarBorrado === 'function') NUBE_limpiarBorrado('metacomp', estado.mesSeleccionado); } catch (e) {}
     guardarLocalmente();
 
     // Actualizar reactivamente el desglose de déficit si procede
@@ -1805,6 +1897,7 @@ function guardarMetaCompartida() {
     if (!estado.metasCompartidas) estado.metasCompartidas = {};
     estado.metasCompartidas[estado.mesSeleccionado] = reparto;
     estado.repartoPredeterminado = Object.assign({}, reparto);
+    try { if (typeof NUBE_limpiarBorrado === 'function') NUBE_limpiarBorrado('metacomp', estado.mesSeleccionado); } catch (e) {}
     guardarLocalmente();
     api('/api/metas-compartidas', 'POST', { metasCompartidas: estado.metasCompartidas, repartoPredeterminado: estado.repartoPredeterminado }).catch(() => {});
     mostrarToast('Reparto de meta guardado con éxito', 'success');
@@ -2994,9 +3087,13 @@ function editarOperacion(id) {
 
 async function confirmarEliminarOperacion(id) {
     if (confirm('¿Seguro que deseas eliminar este movimiento?')) {
+        const op = (estado.transacciones || []).find(t => t && String(t.id) === String(id));
+        const detalle = op ? ('quitó el movimiento "' + (op.concepto || 'sin concepto') + '" (' + Number(op.cantidad || 0).toFixed(2) + ' €)') : 'quitó un movimiento';
         estado.transacciones = estado.transacciones.filter(t => t.id !== id);
         try { if (typeof NUBE_marcarBorrado === 'function') NUBE_marcarBorrado('tx', id); } catch (e) {}
+        try { registrarAvisoBorrado(detalle); } catch (e) {}
         guardarLocalmente();
+        try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
         api(`/api/transaccion/${id}`, 'DELETE').catch(() => {});
         mostrarToast('Movimiento eliminado', 'success');
         actualizarVistas();
@@ -3064,9 +3161,13 @@ function editarRecurrente(id) {
 
 async function eliminarRecurrente(id) {
     if (confirm('¿Eliminar este fijo?')) {
+        const rec = (estado.recurrentes || []).find(r => r && String(r.id) === String(id));
+        const detalle = rec ? ('quitó el fijo "' + (rec.concepto || 'sin concepto') + '"') : 'quitó un fijo';
         estado.recurrentes = estado.recurrentes.filter(r => r.id !== id);
         try { if (typeof NUBE_marcarBorrado === 'function') NUBE_marcarBorrado('rec', id); } catch (e) {}
+        try { registrarAvisoBorrado(detalle); } catch (e) {}
         guardarLocalmente();
+        try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
         api(`/api/recurrente/${id}`, 'DELETE').catch(() => {});
         mostrarToast('Fijo eliminado', 'success');
         actualizarVistas();
@@ -3087,6 +3188,8 @@ function exportarJSON() {
         planesAmortizacion: estado.planesAmortizacion || [],
         repartoPredeterminado: estado.repartoPredeterminado || {},
         usuarios: estado.usuarios,
+        _borrados: estado._borrados || {},
+        _avisos: estado._avisos || [],
         miTelefono: estado.miTelefono || null,
         respaldoPIN: estado.respaldoPIN || null
     }, `gestor_gastos_backup_${new Date().toISOString().substring(0, 10)}.json`);
@@ -3307,6 +3410,9 @@ async function importarJSON(e) {
             if (contenido.planesAmortizacion) estado.planesAmortizacion = contenido.planesAmortizacion;
             if (contenido.repartoPredeterminado) estado.repartoPredeterminado = contenido.repartoPredeterminado;
             if (contenido.usuarios) estado.usuarios = contenido.usuarios;
+            if (contenido._borrados && typeof contenido._borrados === 'object') estado._borrados = contenido._borrados;
+            if (Array.isArray(contenido._avisos)) estado._avisos = contenido._avisos;
+            try { marcarModoDemo(false); } catch (e) {}
             if (typeof contenido.miTelefono === 'string' && contenido.miTelefono) estado.miTelefono = contenido.miTelefono;
             if (typeof contenido.respaldoPIN === 'string' && contenido.respaldoPIN) estado.respaldoPIN = contenido.respaldoPIN;
 
@@ -3326,15 +3432,24 @@ async function importarJSON(e) {
 
 async function restablecerDatosSimulados() {
     if (confirm('¿Restablecer datos de prueba?')) {
+        // Blindaje demo: si estaba vinculado al hogar, desvincular en silencio
+        // para que la demo nunca contamine la nube compartida.
+        try { if (typeof desvincularHogarSilencioso === 'function') desvincularHogarSilencioso(); } catch (e) {}
         estado.transacciones = JSON.parse(JSON.stringify(DATOS_DEMO.transacciones));
         estado.recurrentes = JSON.parse(JSON.stringify(DATOS_DEMO.recurrentes));
         estado.metasPorMes = JSON.parse(JSON.stringify(DATOS_DEMO.metasPorMes));
         estado.metasBorradas = {};
+        estado.metasCompartidas = {};
+        estado.planesAmortizacion = [];
+        estado.repartoPredeterminado = {};
         estado.usuarios = JSON.parse(JSON.stringify(DATOS_DEMO.usuarios));
+        estado._borrados = {};
+        estado._avisos = [];
+        try { marcarModoDemo(true); } catch (e) {}
         guardarLocalmente();
-        try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
+        // Sin subida a la nube: la demo es solo de este móvil.
         api('/api/simular', 'POST').catch(() => {});
-        mostrarToast('¡Datos de prueba cargados correctamente!', 'success');
+        mostrarToast('Demo cargada solo en este móvil (desvinculado del hogar para no mezclar).', 'info');
         inicializarSelectorMeses();
         actualizarSelectUsuarios();
         actualizarVistas();
@@ -3363,6 +3478,8 @@ async function restablecerDatosA0() {
     estado.repartoPredeterminado = {};
     estado.usuarios = {};
     estado._borrados = {};
+    estado._avisos = [];
+    try { marcarModoDemo(false); } catch (e) {}
     estado.miTelefono = null;
     estado.respaldoPIN = null;
     try { localStorage.removeItem(LS_RESPALDO_TS); } catch (e) {}
@@ -3464,7 +3581,8 @@ function construirSnapshotLocal() {
         planesAmortizacion: estado.planesAmortizacion || [],
         repartoPredeterminado: estado.repartoPredeterminado || {},
         usuarios: estado.usuarios || {},
-        _borrados: estado._borrados || {}
+        _borrados: estado._borrados || {},
+        _avisos: estado._avisos || []
     };
 }
 
@@ -3510,6 +3628,7 @@ async function subidaRespaldoPersonal(manual) {
 async function marcarMiTelefono(tel) {
     tel = normalizarTelefono(tel);
     if (!tel) return;
+    try { if (typeof esModoDemo === 'function' && esModoDemo()) { mostrarToast('Estás en versión demo, resetea a 0 en Ajustes para no mezclar con tus datos de hogar.', 'danger'); return; } } catch (e) {}
     const nombre = (estado.usuarios && estado.usuarios[tel]) || tel;
     if (estado.miTelefono === tel && estado.respaldoPIN) {
         mostrarToast('Este ya es tu teléfono: el respaldo personal está activo.', 'info');
@@ -3570,6 +3689,7 @@ async function recuperarRespaldoPersonal() {
         mostrarToast('Indica tu teléfono y tu PIN.', 'danger');
         return;
     }
+    try { if (typeof esModoDemo === 'function' && esModoDemo()) { mostrarToast('Estás en versión demo, resetea a 0 en Ajustes para no mezclar con tus datos de hogar.', 'danger'); return; } } catch (e) {}
     if (!respaldoPersonalConfigurado()) {
         mostrarToast('Respaldo sin configurar: falta nube-config.js.', 'danger');
         return;
@@ -3594,8 +3714,10 @@ async function recuperarRespaldoPersonal() {
         if (datos.repartoPredeterminado && typeof datos.repartoPredeterminado === 'object') estado.repartoPredeterminado = datos.repartoPredeterminado;
         if (datos.usuarios && typeof datos.usuarios === 'object') estado.usuarios = datos.usuarios;
         if (datos._borrados && typeof datos._borrados === 'object') estado._borrados = datos._borrados;
+        if (Array.isArray(datos._avisos)) estado._avisos = datos._avisos;
         estado.miTelefono = tel;
         estado.respaldoPIN = pin;
+        try { marcarModoDemo(false); } catch (e) {}
         guardarLocalmente();
         try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
         inicializarSelectorMeses();

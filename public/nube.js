@@ -9,6 +9,7 @@
 'use strict';
 
 var LS_HOGAR = 'gestor_hogar_v1';
+var LS_AVISOS_VISTOS = 'gestor_avisos_vistos_v1';
 var POLL_MS = 30000;
 var PRUNE_MS = 90 * 24 * 3600 * 1000;
 var timerSubida = null;
@@ -29,6 +30,16 @@ function nubeConfig() {
 }
 
 function nubeConfigurada() { return !!nubeConfig(); }
+
+function esDemoActiva() {
+  try {
+    if (typeof window !== 'undefined' && typeof window.esModoDemo === 'function') return !!window.esModoDemo();
+  } catch (e) {}
+  try {
+    if (typeof localStorage !== 'undefined') return localStorage.getItem('gestor_modo_demo_v1') === '1';
+  } catch (e) {}
+  return false;
+}
 
 function leerVinculo() {
   try {
@@ -104,6 +115,7 @@ function estadoActual() {
     planesAmortizacion: (typeof estado !== 'undefined' && estado.planesAmortizacion) || [],
     repartoPredeterminado: (typeof estado !== 'undefined' && estado.repartoPredeterminado) || {},
     usuarios: (typeof estado !== 'undefined' && estado.usuarios) || {},
+    _avisos: (typeof estado !== 'undefined' && estado._avisos) || [],
     _borrados: borr
   };
 }
@@ -169,6 +181,15 @@ function mergeEstados(local, remoto) {
     planesAmortizacion: unirListas(local.planesAmortizacion, remoto.planesAmortizacion, 'plan'),
     repartoPredeterminado: unirMapas(local.repartoPredeterminado, remoto.repartoPredeterminado, 'reparto'),
     usuarios: unirMapas(local.usuarios, remoto.usuarios, 'usr'),
+    _avisos: (function () {
+      var lista = unirListas(local._avisos, remoto._avisos, 'aviso');
+      // Podar a los últimos 30 por fecha para no engordar la nube.
+      try {
+        lista.sort(function (a, b) { return (a.ts || 0) - (b.ts || 0); });
+        if (lista.length > 30) lista = lista.slice(-30);
+      } catch (e) {}
+      return lista;
+    })(),
     _borrados: borrados
   };
   // Una meta quitada manualmente gana a cualquier valor heredado: se suprime
@@ -202,7 +223,8 @@ function huella(est) {
     mc: normMap(est.metasCompartidas),
     p: normList(est.planesAmortizacion),
     rp: normMap(est.repartoPredeterminado),
-    u: normMap(est.usuarios)
+    u: normMap(est.usuarios),
+    av: normList(est._avisos)
   });
 }
 
@@ -220,6 +242,7 @@ function aplicarEstado(est) {
     if (est.repartoPredeterminado && typeof est.repartoPredeterminado === 'object') estado.repartoPredeterminado = est.repartoPredeterminado;
     estado.usuarios = est.usuarios || {};
     estado._borrados = est._borrados || {};
+    if (Array.isArray(est._avisos)) estado._avisos = est._avisos;
     try { window.__NUBE_SUPRIMIR__ = true; guardarLocalmente(); }
     finally { try { window.__NUBE_SUPRIMIR__ = false; } catch (e) {} }
     try { if (typeof inicializarSelectorMeses === 'function') inicializarSelectorMeses(); } catch (e) {}
@@ -281,8 +304,16 @@ async function bajadaNube(manual) {
     aplicarEstado(merged);
     marcarSync('ok');
     refrescarHogarUI();
-    if (cambio) toastNube('Novedades del hogar aplicadas.', 'success');
-    else if (manual) toastNube('Ya estabas al día.', 'info');
+    // Si alguien quitó algo se avisa con "X quitó Y" una sola vez.
+    // Ya no sale el genérico "Novedades del hogar aplicadas" que nadie pidió:
+    // el borrado se aplica en silencio en ambos y solo se avisa lo borrado.
+    var nuevos = 0;
+    try { nuevos = mostrarAvisosNuevos(merged); } catch (e) {}
+    if (manual) {
+      if (!nuevos && !cambio) toastNube('Ya estabas al día.', 'info');
+      // Si manual y hubo cambio pero sin avisos (ej. gasto nuevo), no se
+      // molesta con genéricos: las vistas ya se actualizaron solas.
+    }
     return cambio;
   } catch (e) {
     marcarSync('error', e);
@@ -337,6 +368,65 @@ function NUBE_marcarBorrado(clase, id) {
   } catch (e) {}
 }
 
+function NUBE_limpiarBorrado(clase, id) {
+  // Al volver a crear algo borrado (ej. reactivar reparto), quitar la lápida
+  // para que la nube lo acepte de nuevo en ambos móviles.
+  try {
+    if (typeof estado === 'undefined' || !estado._borrados) return;
+    delete estado._borrados[clase + ':' + String(id)];
+  } catch (e) {}
+}
+
+/* ---------------- avisos "X quitó Y" (una sola vez) ---------------- */
+
+function leerAvisosVistos() {
+  try {
+    var raw = localStorage.getItem(LS_AVISOS_VISTOS);
+    if (!raw) return {};
+    var v = JSON.parse(raw);
+    return (v && typeof v === 'object') ? v : {};
+  } catch (e) { return {}; }
+}
+
+function guardarAvisosVistos(mapa) {
+  try {
+    var ks = Object.keys(mapa || {});
+    // Podar a los últimos 100 para no engordar localStorage.
+    if (ks.length > 100) {
+      ks.sort().slice(0, ks.length - 100).forEach(function (k) { delete mapa[k]; });
+    }
+    localStorage.setItem(LS_AVISOS_VISTOS, JSON.stringify(mapa));
+  } catch (e) {}
+}
+
+function mostrarAvisosNuevos(merged) {
+  var lista = (merged && merged._avisos) || ((typeof estado !== 'undefined' && estado._avisos) || []);
+  if (!lista.length) return 0;
+  var vistos = leerAvisosVistos();
+  var esPrimera = Object.keys(vistos).length === 0;
+  var nuevos = 0;
+  lista.forEach(function (av) {
+    if (!av || !av.id) return;
+    if (vistos[av.id]) return;
+    vistos[av.id] = Date.now();
+    if (esPrimera) return; // la primera vez se marcan sin molestar
+    var quien = av.por || 'Alguien del hogar';
+    var que = av.texto || 'quitó algo';
+    // No auto-avisar de lo que acabo de quitar yo en este dispositivo:
+    // el que borra ya vio su propio toast local.
+    try {
+      var yo = null;
+      var vinc = leerVinculo();
+      if (vinc) yo = vinc.miembroNombre || vinc.miembroTelefono;
+      if (yo && quien === yo) return;
+    } catch (e) {}
+    try { toastNube('👤 ' + quien + ' ' + que, 'info'); } catch (e) {}
+    nuevos++;
+  });
+  guardarAvisosVistos(vistos);
+  return nuevos;
+}
+
 /* ---------------- crear / unirse / salir ---------------- */
 
 function leerFormularioHogar() {
@@ -378,6 +468,7 @@ function asegurarMiembro(tel, nom) {
 async function crearHogar() {
   var f = leerFormularioHogar();
   if (!f.nombre || !f.telefono) { toastNube('Indica tu nombre y tu teléfono.', 'danger'); return; }
+  if (esDemoActiva()) { toastNube('Estás en versión demo, resetea a 0 en Ajustes para no mezclar con tus datos de hogar.', 'danger'); return; }
   if (!nubeConfigurada()) { toastNube('Nube sin configurar.', 'danger'); return; }
   if (!hayRed()) { toastNube('Sin conexión a internet.', 'danger'); return; }
   toastNube('Creando tu hogar…', 'info');
@@ -408,6 +499,7 @@ async function crearHogar() {
 async function unirseHogar() {
   var f = leerFormularioHogar();
   if (!f.nombre || !f.telefono || !f.codigo) { toastNube('Indica tu nombre, tu teléfono y el código.', 'danger'); return; }
+  if (esDemoActiva()) { toastNube('Estás en versión demo, resetea a 0 en Ajustes para no mezclar con tus datos de hogar.', 'danger'); return; }
   if (!nubeConfigurada()) { toastNube('Nube sin configurar.', 'danger'); return; }
   if (!hayRed()) { toastNube('Sin conexión a internet.', 'danger'); return; }
   toastNube('Uniéndote al hogar…', 'info');
@@ -432,6 +524,9 @@ function desvincularHogarSilencioso() {
   // Igual que desvincularHogar pero sin preguntar ni tocar la nube:
   // se usa al restablecer el dispositivo para no borrar la copia del hogar.
   guardarVinculo(null);
+  try { reemplazarProxima = false; } catch (e) {}
+  try { if (timerSubida) clearTimeout(timerSubida); } catch (e) {}
+  timerSubida = null;
   try { if (rtCanal && rtCanal.unsubscribe) rtCanal.unsubscribe(); } catch (e) {}
   rtCanal = null;
   refrescarHogarUI();
@@ -593,6 +688,7 @@ try {
   var __g = (typeof window !== 'undefined') ? window : globalThis;
   __g.programarSubidaNube = programarSubidaNube;
   __g.NUBE_marcarBorrado = NUBE_marcarBorrado;
+  __g.NUBE_limpiarBorrado = NUBE_limpiarBorrado;
   __g.NUBE_hogarVinculado = NUBE_hogarVinculado;
   __g.crearHogar = crearHogar;
   __g.unirseHogar = unirseHogar;
