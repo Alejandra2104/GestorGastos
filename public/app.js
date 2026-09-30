@@ -933,9 +933,10 @@ function renderMetaAhorro() {
     if (planActivo) {
         migrarPlanViejo(planActivo);
         const cuotaEsteMes = cuotaDePlanParaMes(planActivo, estado.mesSeleccionado);
-        // Balance en vivo de este mes: mueve saldo y aportado según añades/gastas.
-        const balVivoPlanRaw = balanceDeMesClave(estado.mesSeleccionado);
-        const balVivoPlan = Math.max(0, balVivoPlanRaw);
+        // Lo ya aplicado de este mes (al visitar meses futuros) no se resta dos veces.
+        const aplicadoYaEsteMes = Number((planActivo.pagosAplicados && planActivo.pagosAplicados[estado.mesSeleccionado]) || 0);
+        const aporteVivoMes = Math.max(0, redondear2(balVivoPlanRaw - aplicadoYaEsteMes));
+        const balVivoPlan = aporteVivoMes;
 
         if (bannerAmortizacion) {
             bannerAmortizacion.style.display = 'block';
@@ -971,8 +972,9 @@ function renderMetaAhorro() {
             try {
                 const aportadoConfirmado = aportadoDePlan(planActivo);
                 const total = Number(planActivo.deficitTotalAcumulado !== undefined ? planActivo.deficitTotalAcumulado : planActivo.deficitTotal) || 0;
-                const balVivoRaw = balVivoPlanRaw;
-                const balVivo = balVivoPlan;
+                const balVivoRaw = balanceDeMesClave(estado.mesSeleccionado);
+                const aplicadoYa2 = Number((planActivo.pagosAplicados && planActivo.pagosAplicados[estado.mesSeleccionado]) || 0);
+                const balVivo = Math.max(0, redondear2(balVivoRaw - aplicadoYa2));
                 const aportadoVivo = Math.max(0, redondear2(aportadoConfirmado + balVivo));
                 const cuotaNum = Number(cuotaEsteMes) || 0;
                 const elAp = document.getElementById('lblAmortAportado');
@@ -1038,7 +1040,8 @@ function renderMetaAhorro() {
                 const badgeP = document.getElementById('badgeAmortizacionProrroga');
                 if (badgeP) { badgeP.style.display = 'inline-block'; badgeP.textContent = '⏱️ Elige prórroga'; }
                 const balVivoFinRaw = balanceDeMesClave(estado.mesSeleccionado);
-                const saldoVivoFin = Math.max(0, redondear2(planVivo.saldoPendiente - Math.max(0, balVivoFinRaw)));
+                const aplicadoYaFin = Number((planVivo.pagosAplicados && planVivo.pagosAplicados[estado.mesSeleccionado]) || 0);
+                const saldoVivoFin = Math.max(0, redondear2(planVivo.saldoPendiente - Math.max(0, redondear2(balVivoFinRaw - aplicadoYaFin))));
                 document.getElementById('lblAmortSaldoPendiente').textContent = `${saldoVivoFin.toFixed(2)} €`;
                 document.getElementById('lblAmortCuotaMes').textContent = `pendiente`;
                 document.getElementById('lblAmortDesgloseMiembros').innerHTML =
@@ -1118,7 +1121,8 @@ function renderMetaAhorro() {
         // Ej: 65 € en ago + 85 € en sep = 150 de 150 → saldado (65+85 cubre todo).
         if (planActivo) {
             const totalPlan = Number(planActivo.deficitTotalAcumulado !== undefined ? planActivo.deficitTotalAcumulado : planActivo.deficitTotal) || 0;
-            const aportVivoLiq = Math.max(0, redondear2(aportadoDePlan(planActivo) + Math.max(0, balanceActual)));
+            const aplicadoYaLiq = Number((planActivo.pagosAplicados && planActivo.pagosAplicados[estado.mesSeleccionado]) || 0);
+            const aportVivoLiq = Math.max(0, redondear2(aportadoDePlan(planActivo) + Math.max(0, redondear2(balanceActual - aplicadoYaLiq))));
             if (totalPlan > 0 && aportVivoLiq >= totalPlan - 0.05) {
                 const ref = estado.mesSeleccionado;
                 liquidarPlanYLiberarMetas(planActivo, ref, false);
