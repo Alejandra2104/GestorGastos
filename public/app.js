@@ -959,27 +959,36 @@ function renderMetaAhorro() {
             document.getElementById('lblAmortDesgloseMiembros').innerHTML =
                 `💡 <strong>Aportación mensual requerida:</strong> ${miembrosDesglose || 'cuota única del hogar'}`;
 
-            // Aportado / retraso (punto 5.a: solo informa, no exige el doble al mes siguiente)
+            // Aportado / retraso en directo: incluye lo ahorrado ESTE mes según lo añades
+            // (65 € en agosto se ven como 65 de 150 al momento), no solo meses cerrados.
+            // Solo informa, no exige el doble al mes siguiente.
             try {
-                const aportado = aportadoDePlan(planActivo);
+                const aportadoConfirmado = aportadoDePlan(planActivo);
                 const total = Number(planActivo.deficitTotalAcumulado !== undefined ? planActivo.deficitTotalAcumulado : planActivo.deficitTotal) || 0;
+                const balVivoRaw = balanceDeMesClave(estado.mesSeleccionado);
+                const balVivo = Math.max(0, balVivoRaw);
+                const aportadoVivo = Math.max(0, redondear2(aportadoConfirmado + balVivo));
+                const cuotaNum = Number(cuotaEsteMes) || 0;
                 const elAp = document.getElementById('lblAmortAportado');
-                if (elAp) elAp.innerHTML = `Llevas aportado <strong>${aportado.toFixed(2)} €</strong> de <strong>${total.toFixed(2)} €</strong>`;
-                // Retraso esperado: cuota media x meses ya cerrados del plan vs aportado en esos meses
+                if (elAp) elAp.innerHTML = `Llevas aportado <strong>${aportadoVivo.toFixed(2)} €</strong> de <strong>${total.toFixed(2)} €</strong>`;
+                // Lo que falta este mes (cuota - lo de este mes) y retraso total (esperado - aportado).
                 const idxActual = planActivo.mesesLista.indexOf(estado.mesSeleccionado);
-                const mesesPasados = idxActual > 0 ? planActivo.mesesLista.slice(0, idxActual) : [];
+                const mesesHastaHoy = idxActual >= 0 ? planActivo.mesesLista.slice(0, idxActual + 1) : [];
                 let esperado = 0;
-                mesesPasados.forEach(m => { esperado += Number(cuotaDePlanParaMes(planActivo, m)) || 0; });
+                mesesHastaHoy.forEach(m => { esperado += Number(cuotaDePlanParaMes(planActivo, m)) || 0; });
                 esperado = redondear2(esperado);
-                let aportadoPasado = 0;
-                mesesPasados.forEach(m => { aportadoPasado += Number(planActivo.pagosAplicados && planActivo.pagosAplicados[m]) || 0; });
-                aportadoPasado = redondear2(aportadoPasado);
-                const retraso = redondear2(esperado - aportadoPasado);
+                const faltanMes = redondear2(cuotaNum - balVivoRaw);
+                const retrasoTotal = redondear2(esperado - aportadoVivo);
                 const elRe = document.getElementById('lblAmortRetraso');
                 if (elRe) {
-                    if (retraso > 0.01) elRe.innerHTML = `⚠️ Vas con <strong>${retraso.toFixed(2)} € de retraso</strong>: este mes solo debes la cuota (${Number(cuotaEsteMes).toFixed(2)} €), al final se recalculará.`;
-                    else if (retraso < -0.01) elRe.innerHTML = `✅ Vas adelantado en <strong>${(-retraso).toFixed(2)} €</strong>. Sigue así.`;
-                    else elRe.innerHTML = `✅ Vas al día. Este mes: ${Number(cuotaEsteMes).toFixed(2)} €.`;
+                    if (faltanMes > 0.01) {
+                        let extra = ': al final se recalculará.';
+                        if (retrasoTotal > faltanMes + 0.01) extra = ` y vas con <strong>${retrasoTotal.toFixed(2)} €</strong> de retraso total: al final se recalculará.`;
+                        elRe.innerHTML = `⚠️ Te faltan <strong>${faltanMes.toFixed(2)} € este mes</strong> para la cuota (${cuotaNum.toFixed(2)} €)${extra}`;
+                    }
+                    else if (retrasoTotal > 0.01) elRe.innerHTML = `⚠️ Este mes cubierto, pero vas con <strong>${retrasoTotal.toFixed(2)} €</strong> de retraso total: al final se recalculará.`;
+                    else if (retrasoTotal < -0.01) elRe.innerHTML = `✅ Vas adelantado en <strong>${(-retrasoTotal).toFixed(2)} €</strong>. Sigue así.`;
+                    else elRe.innerHTML = `✅ Vas al día. Este mes: ${cuotaNum.toFixed(2)} €.`;
                 }
             } catch (e) {}
         }
@@ -1029,8 +1038,10 @@ function renderMetaAhorro() {
                 try {
                     const ap = aportadoDePlan(planVivo);
                     const tot = Number(planVivo.deficitTotalAcumulado !== undefined ? planVivo.deficitTotalAcumulado : planVivo.deficitTotal) || 0;
+                    const balVivoFin = Math.max(0, balanceDeMesClave(estado.mesSeleccionado));
+                    const apVivo = Math.max(0, redondear2(ap + balVivoFin));
                     const elAp2 = document.getElementById('lblAmortAportado');
-                    if (elAp2) elAp2.innerHTML = `Llevas aportado <strong>${ap.toFixed(2)} €</strong> de <strong>${tot.toFixed(2)} €</strong>`;
+                    if (elAp2) elAp2.innerHTML = `Llevas aportado <strong>${apVivo.toFixed(2)} €</strong> de <strong>${tot.toFixed(2)} €</strong>`;
                     const elRe2 = document.getElementById('lblAmortRetraso');
                     if (elRe2) elRe2.innerHTML = `⏱️ Plan terminado con deuda. No se exige todo ya: elige prórroga abajo.`;
                 } catch (e) {}
@@ -1094,17 +1105,22 @@ function renderMetaAhorro() {
         bannerDeficit.style.display = 'none';
         try { const sb2 = document.getElementById('sugerenciaAhorroBox'); if (sb2) sb2.style.display = 'none'; } catch (e) {}
 
-        // Si hay plan activo y el superávit de ESTE mes salda todo lo que queda, autoliquidar
-        // (punto 1: si acabas antes, los meses siguientes quedan libres y se limpian).
-        if (planActivo && balanceActual - meta >= planActivo.saldoPendiente - 0.001) {
-            const ref = estado.mesSeleccionado;
-            liquidarPlanYLiberarMetas(planActivo, ref, false);
-            planActivo = null;
-            if (bannerAmortizacion) bannerAmortizacion.style.display = 'none';
-            if (boxBaseAmortizacion) boxBaseAmortizacion.style.display = 'none';
-            const bpf = document.getElementById('boxProrrogaFinal');
-            if (bpf) bpf.style.display = 'none';
-            mostrarToast('🎉 ¡Plan saldado con el superávit de este mes! Los meses siguientes quedan libres.', 'success');
+        // Si con lo aportado hasta este mes (incluido lo de este mes en directo)
+        // ya se cubre toda la deuda, se liquida solo y los meses siguientes quedan libres.
+        // Ej: 65 € en ago + 85 € en sep = 150 de 150 → saldado (65+85 cubre todo).
+        if (planActivo) {
+            const totalPlan = Number(planActivo.deficitTotalAcumulado !== undefined ? planActivo.deficitTotalAcumulado : planActivo.deficitTotal) || 0;
+            const aportVivoLiq = Math.max(0, redondear2(aportadoDePlan(planActivo) + Math.max(0, balanceActual)));
+            if (totalPlan > 0 && aportVivoLiq >= totalPlan - 0.05) {
+                const ref = estado.mesSeleccionado;
+                liquidarPlanYLiberarMetas(planActivo, ref, false);
+                planActivo = null;
+                if (bannerAmortizacion) bannerAmortizacion.style.display = 'none';
+                if (boxBaseAmortizacion) boxBaseAmortizacion.style.display = 'none';
+                const bpf = document.getElementById('boxProrrogaFinal');
+                if (bpf) bpf.style.display = 'none';
+                mostrarToast('🎉 ¡Plan saldado con lo aportado! Los meses siguientes quedan libres.', 'success');
+            }
         }
     } else {
         bannerCelebracion.style.display = 'none';

@@ -2,7 +2,7 @@
 
 **Autora:** Alejandra Medina Bobadilla
 **Curso:** Vibe Coding e IA Generativa · **Profesor:** José Antonio Delgado Alfonso
-**Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`, v1.9.2)
+**Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`, v1.9.3)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
 **Memoria de sesiones con IA:** ver `PROMPT-LOG.md`
 
@@ -60,7 +60,7 @@ npm start
 1. **Junio (0:00-1:00):** meta 300 €, ahorro 300 € → barra al 100 % y `¡Objetivo cumplido!`.
 2. **Julio (1:00-2:30):** meta 300 €, ahorro 150 € → déficit 150 €. Se ven solas la alerta (`En Alimentación has gastado 150 € más que en junio`) y la sugerencia (`recorta 150 € en Alimentación`). Clic en `Amortizar en 2 meses` → base 75 € en ago + 75 € en sep.
 3. **Agosto (2:30-3:30):** pack junto (base 75 € + cartel `Mes 1 de 2` + Saldar). Ahorro 65 € → `faltan 10 € este mes`, `saldo 85 €, vas con 10 € de retraso` (la deuda ya descuenta de verdad).
-4. **Septiembre (3:30-5:00, Mes 2/2, debes 85 €):** tres salidas sin moverte de mes: sin añadir nada → caja `Elige prórroga 2/4/6/8/12`; añades 85 € (superávit 10 €) → `Saldar` manual; añades 100 € extra (superávit 100 €) → se salda solo y el plan desaparece.
+4. **Septiembre (3:30-5:00, Mes 2/2, debes 85 €):** el aportado se mueve en directo (65 € en agosto se ven como 65 de 150 al momento). Tres salidas sin moverte de mes: sin añadir nada → caja `Elige prórroga 2/4/6/8/12`; 75 € justos → `Saldar` manual (perdona 10 €); 85 € o más → se salda solo (65+85=150) y el plan desaparece.
 
 ## 6. Aviso importante: qué archivo evaluar
 
