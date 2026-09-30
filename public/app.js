@@ -933,6 +933,9 @@ function renderMetaAhorro() {
     if (planActivo) {
         migrarPlanViejo(planActivo);
         const cuotaEsteMes = cuotaDePlanParaMes(planActivo, estado.mesSeleccionado);
+        // Balance en vivo de este mes: mueve saldo y aportado según añades/gastas.
+        const balVivoPlanRaw = balanceDeMesClave(estado.mesSeleccionado);
+        const balVivoPlan = Math.max(0, balVivoPlanRaw);
 
         if (bannerAmortizacion) {
             bannerAmortizacion.style.display = 'block';
@@ -945,7 +948,10 @@ function renderMetaAhorro() {
                 badgeProrroga.style.display = planActivo.prorrogaActiva ? 'inline-block' : 'none';
             }
 
-            document.getElementById('lblAmortSaldoPendiente').textContent = `${planActivo.saldoPendiente.toFixed(2)} €`;
+            // Saldo en directo: baja con lo que ingresas y sube con lo que gastas de más.
+            // Ej: debes 85 € y metes 75 € → marca 10 € (faltan 10 €).
+            const saldoVivo = Math.max(0, redondear2(planActivo.saldoPendiente - balVivoPlan));
+            document.getElementById('lblAmortSaldoPendiente').textContent = `${saldoVivo.toFixed(2)} €`;
             document.getElementById('lblAmortCuotaMes').textContent = `+${Number(cuotaEsteMes).toFixed(2)} €/mes`;
 
             // Desglose mensual por miembro (cuota de este mes)
@@ -965,8 +971,8 @@ function renderMetaAhorro() {
             try {
                 const aportadoConfirmado = aportadoDePlan(planActivo);
                 const total = Number(planActivo.deficitTotalAcumulado !== undefined ? planActivo.deficitTotalAcumulado : planActivo.deficitTotal) || 0;
-                const balVivoRaw = balanceDeMesClave(estado.mesSeleccionado);
-                const balVivo = Math.max(0, balVivoRaw);
+                const balVivoRaw = balVivoPlanRaw;
+                const balVivo = balVivoPlan;
                 const aportadoVivo = Math.max(0, redondear2(aportadoConfirmado + balVivo));
                 const cuotaNum = Number(cuotaEsteMes) || 0;
                 const elAp = document.getElementById('lblAmortAportado');
@@ -1031,10 +1037,12 @@ function renderMetaAhorro() {
                 document.getElementById('badgeAmortizacionProgreso').textContent = `Plan de ${planVivo.mesesLista.length} meses terminado`;
                 const badgeP = document.getElementById('badgeAmortizacionProrroga');
                 if (badgeP) { badgeP.style.display = 'inline-block'; badgeP.textContent = '⏱️ Elige prórroga'; }
-                document.getElementById('lblAmortSaldoPendiente').textContent = `${planVivo.saldoPendiente.toFixed(2)} €`;
+                const balVivoFinRaw = balanceDeMesClave(estado.mesSeleccionado);
+                const saldoVivoFin = Math.max(0, redondear2(planVivo.saldoPendiente - Math.max(0, balVivoFinRaw)));
+                document.getElementById('lblAmortSaldoPendiente').textContent = `${saldoVivoFin.toFixed(2)} €`;
                 document.getElementById('lblAmortCuotaMes').textContent = `pendiente`;
                 document.getElementById('lblAmortDesgloseMiembros').innerHTML =
-                    `💡 El plan acabó y aún debes <strong>${planVivo.saldoPendiente.toFixed(2)} €</strong>. Elige abajo en cuántos meses lo recuperas.`;
+                    `💡 El plan acabó y aún debes <strong>${saldoVivoFin.toFixed(2)} €</strong> con lo de este mes. Elige abajo en cuántos meses lo recuperas.`;
                 try {
                     const ap = aportadoDePlan(planVivo);
                     const tot = Number(planVivo.deficitTotalAcumulado !== undefined ? planVivo.deficitTotalAcumulado : planVivo.deficitTotal) || 0;
@@ -1128,7 +1136,17 @@ function renderMetaAhorro() {
         const deficit = meta - balanceActual;
         document.getElementById('lblDeficitImporte').textContent = `${deficit.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €`;
         actualizarDesgloseDeficitUI();
-        actualizarCalculoProrrateo();
+        // A mitad de plan no se ofrece otro plan: el desfase se acumula
+        // y se ajusta en la prórroga al final (no se crean mini-planes).
+        const prControls = document.getElementById('prorrateControls');
+        const prDetalle = document.getElementById('lblProrrateoDetalle');
+        if (planActivo) {
+            if (prControls) prControls.style.display = 'none';
+            if (prDetalle) prDetalle.innerHTML = `📌 Este desfase de <strong>${deficit.toFixed(2)} €</strong> se acumula al plan actual y se ajustará en la prórroga al terminar. Este mes solo debes la cuota.`;
+        } else {
+            if (prControls) prControls.style.display = '';
+            actualizarCalculoProrrateo();
+        }
         try { renderSugerenciaAhorro(deficit); } catch (e) {}
     }
 
@@ -1174,6 +1192,9 @@ function actualizarCalculoProrrateo() {
     const meta = parseFloat(document.getElementById('inputMetaAhorro').value);
     const lblDetalle = document.getElementById('lblProrrateoDetalle');
     if (!lblDetalle) return;
+
+    // A mitad de plan no se calcula otro plan: el desfase va a la prórroga final.
+    if (obtenerPlanAmortizacionActivo(estado.mesSeleccionado)) return;
 
     if (isNaN(meta) || meta <= 0) {
         lblDetalle.innerHTML = 'Fija primero una meta válida para calcular el plan de recuperación.';
@@ -1376,6 +1397,12 @@ async function aplicarPlanProrrateo() {
 
     if (deficit <= 0) {
         mostrarToast('No hay déficit que amortizar este mes', 'info');
+        return;
+    }
+
+    // A mitad de un plan no se crea otro: el desfase se acumula y se ajusta en la prórroga final.
+    if (obtenerPlanAmortizacionActivo(estado.mesSeleccionado)) {
+        mostrarToast('Este mes ya está cubierto por el plan actual: el desfase se acumulará y se ajustará en la prórroga al terminar.', 'info');
         return;
     }
 
