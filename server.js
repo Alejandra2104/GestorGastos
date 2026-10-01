@@ -341,7 +341,8 @@ app.post('/api/simular', (req, res) => {
             { id: 4, concepto: "Seguro de Hogar & Coche", tipo: "gasto", dia: 5, cantidad: 50, categoria: "Banco y Seguros", telefono: "600111222", esCompartido: true, formaPago: "tarjeta", activo: true },
             { id: 5, concepto: "Fibra Óptica 1Gb + Móviles", tipo: "gasto", dia: 10, cantidad: 40, categoria: "Suministros", telefono: "600333444", esCompartido: true, formaPago: "tarjeta", activo: true },
             { id: 6, concepto: "Factura Eléctrica", tipo: "gasto", dia: 15, cantidad: 60, categoria: "Suministros", telefono: "600333444", esCompartido: true, formaPago: "efectivo", activo: true },
-            { id: 7, concepto: "Suscripciones (Streaming/Gym)", tipo: "gasto", dia: 20, cantidad: 30, categoria: "Ocio y Actividades", telefono: "600111222", esCompartido: true, formaPago: "tarjeta", activo: true }
+            { id: 7, concepto: "Suscripciones (Streaming/Gym)", tipo: "gasto", dia: 20, cantidad: 30, categoria: "Ocio y Actividades", telefono: "600111222", esCompartido: true, formaPago: "tarjeta", activo: true },
+            { id: 8, concepto: "Suscripcion musica mini", tipo: "gasto", dia: 12, cantidad: 9.99, categoria: "Ocio y Actividades", telefono: "600111222", esCompartido: false, formaPago: "tarjeta", activo: true }
         ],
         transacciones: [
             { id: 101, telefono: "600111222", tipo: "gasto", concepto: "Supermercado Marzo Mercadona", categoria: "Alimentación", cantidad: 120, esCompartido: true, formaPago: "tarjeta", fecha: "2026-03-08T11:00:00.000Z" },
@@ -367,7 +368,11 @@ app.post('/api/simular', (req, res) => {
             { id: 121, telefono: "600333444", tipo: "gasto", concepto: "Dental Higiene", categoria: "Salud y Cuidado", cantidad: 45, esCompartido: false, formaPago: "tarjeta", fecha: "2026-08-23T16:00:00.000Z" },
             { id: 122, telefono: "600111222", tipo: "gasto", concepto: "Material vuelta al cole", categoria: "Otros", cantidad: 200, esCompartido: true, formaPago: "tarjeta", fecha: "2026-09-02T10:30:00.000Z" },
             { id: 123, telefono: "600333444", tipo: "gasto", concepto: "Supermercado Septiembre", categoria: "Alimentación", cantidad: 250, esCompartido: true, formaPago: "tarjeta", fecha: "2026-09-05T12:00:00.000Z" },
-            { id: 124, telefono: "600111222", tipo: "gasto", concepto: "Abono transporte", categoria: "Transporte", cantidad: 70, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-07T08:15:00.000Z" }
+            { id: 124, telefono: "600111222", tipo: "gasto", concepto: "Abono transporte", categoria: "Transporte", cantidad: 70, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-07T08:15:00.000Z" },
+            { id: 201, telefono: "600111222", tipo: "gasto", concepto: "Cafe manana", categoria: "Ocio y Actividades", cantidad: 3.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-08T09:00:00.000Z" },
+            { id: 202, telefono: "600111222", tipo: "gasto", concepto: "Cafe manana", categoria: "Ocio y Actividades", cantidad: 3.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-10T09:00:00.000Z" },
+            { id: 203, telefono: "600111222", tipo: "gasto", concepto: "Cafe manana", categoria: "Ocio y Actividades", cantidad: 3.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-12T09:00:00.000Z" },
+            { id: 204, telefono: "600333444", tipo: "gasto", concepto: "Snack kiosco", categoria: "Alimentación", cantidad: 2.8, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-15T18:00:00.000Z" }
         ]
     };
 

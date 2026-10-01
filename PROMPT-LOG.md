@@ -6,7 +6,7 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.9.14
+**Versión documentada:** v1.9.15
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
 > Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.9.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
@@ -207,6 +207,11 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Fallos:** la sugerencia `Para el mes que viene (faltan 75 €): recorta 3.33 en Transporte… faltarían 71.67` no se actualizaba al darle a `Prorrogar` (debería poner 85 en vivo); iba dentro del naranja y solo con déficit; texto `recorta X` poco accionable.
 * **Cambios (genéricos demo y real):** `renderSugerenciaAhorro()` usa saldo vivo en modo prórroga (85, en vivo con cada ingreso/gasto) y nuevo formato `podrías gastar como máximo X € en CAT, ahorrarías Y € (tu media es Z €)` (solo recorta donde `gastado > media` de hasta 3 meses previos, solo gasto sin fijos/ingresos); nuevo `bannerSugerencia` independiente en `public/index.html` + `banner-sugerencia` llamativo en `style.css` con título `💡 Sugerencia de ahorro`; nueva `renderSugerenciaIndependiente()` (con `claveMesAnterior()` / `nombreMesLargo()` / `calcularSugerenciaParaMes()`): en el mes actual enseña lo del anterior para este mes, siempre visible haya plan o no (si cumplió, mensaje de mantenimiento con topes por media).
 * **Versión:** app → v1.9.14, SW → v1.8.26. Verificado con `node --check` y push a `main`.
+
+### S28 — Bloque inteligencia + hormiga v1.9.15 (01/10/2026, pedido por Alejandra)
+* **Pedidos:** rediseñar "Meta de Ahorro" en dos bloques sin texto denso; el desglose por miembro (50/50) solo si se marca "Meta compartida"; sacar la sugerencia del cuadro naranja a "Proyección próximo mes"; textos con palabras ("ahorras X €", "fue único · evita repetir"); quitar el triángulo rojo; añadir "gastos hormiga" en el Bloque 3 con píldora y detalle desplegable.
+* **Cambios (solo visual, la lógica de cálculo no cambia):** nuevo `bloqueInteligencia` con 3 tarjetas (`cardSugerencia` / `cardProyeccion` / `cardTendencias`) en `public/index.html` + estilos KPI en `public/style.css`; `renderSugerenciaAhorro()` pinta la proyección en su tarjeta (usa saldo vivo en prórroga), `renderSugerenciaIndependiente()` pinta la sugerencia en su tarjeta (vacío "No hay meta establecida" sin meta, tendencias siempre visibles); desgloses por miembro gateados por `esMetaCompartidaActiva()`; nueva detección `detectarGastosHormiga()` (micros ≤15 € en propensas, mismo concepto ≥3 en 7 días, fijos pequeños ≤20 €) con `🐜 Fuga hormiga estimada` + `<details>` en el Bloque 3; demo con cafés/snack + suscripción mini 9,99 € para verlo.
+* **Versión:** app → v1.9.15, SW → v1.8.27. Verificado con `node --check` y push a `main`.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 

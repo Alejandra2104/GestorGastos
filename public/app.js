@@ -40,7 +40,8 @@ const DATOS_DEMO = {
         { id: 4, concepto: "Seguro de Hogar & Coche", tipo: "gasto", dia: 5, cantidad: 50, categoria: "Banco y Seguros", telefono: "600111222", esCompartido: true, formaPago: "tarjeta", activo: true },
         { id: 5, concepto: "Fibra Óptica 1Gb + Móviles", tipo: "gasto", dia: 10, cantidad: 40, categoria: "Suministros", telefono: "600333444", esCompartido: true, formaPago: "tarjeta", activo: true },
         { id: 6, concepto: "Factura Eléctrica", tipo: "gasto", dia: 15, cantidad: 60, categoria: "Suministros", telefono: "600333444", esCompartido: true, formaPago: "efectivo", activo: true },
-        { id: 7, concepto: "Suscripciones (Streaming/Gym)", tipo: "gasto", dia: 20, cantidad: 30, categoria: "Ocio y Actividades", telefono: "600111222", esCompartido: true, formaPago: "tarjeta", activo: true }
+        { id: 7, concepto: "Suscripciones (Streaming/Gym)", tipo: "gasto", dia: 20, cantidad: 30, categoria: "Ocio y Actividades", telefono: "600111222", esCompartido: true, formaPago: "tarjeta", activo: true },
+        { id: 8, concepto: "Suscripcion musica mini", tipo: "gasto", dia: 12, cantidad: 9.99, categoria: "Ocio y Actividades", telefono: "600111222", esCompartido: false, formaPago: "tarjeta", activo: true }
     ],
     transacciones: [
         { id: 101, telefono: "600111222", tipo: "gasto", concepto: "Supermercado Marzo Mercadona", categoria: "Alimentación", cantidad: 120, esCompartido: true, formaPago: "tarjeta", fecha: "2026-03-08T11:00:00.000Z" },
@@ -66,7 +67,11 @@ const DATOS_DEMO = {
         { id: 121, telefono: "600333444", tipo: "gasto", concepto: "Dental Higiene", categoria: "Salud y Cuidado", cantidad: 45, esCompartido: false, formaPago: "tarjeta", fecha: "2026-08-23T16:00:00.000Z" },
         { id: 122, telefono: "600111222", tipo: "gasto", concepto: "Material vuelta al cole", categoria: "Otros", cantidad: 200, esCompartido: true, formaPago: "tarjeta", fecha: "2026-09-02T10:30:00.000Z" },
         { id: 123, telefono: "600333444", tipo: "gasto", concepto: "Supermercado Septiembre", categoria: "Alimentación", cantidad: 250, esCompartido: true, formaPago: "tarjeta", fecha: "2026-09-05T12:00:00.000Z" },
-        { id: 124, telefono: "600111222", tipo: "gasto", concepto: "Abono transporte", categoria: "Transporte", cantidad: 70, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-07T08:15:00.000Z" }
+        { id: 124, telefono: "600111222", tipo: "gasto", concepto: "Abono transporte", categoria: "Transporte", cantidad: 70, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-07T08:15:00.000Z" },
+        { id: 201, telefono: "600111222", tipo: "gasto", concepto: "Cafe manana", categoria: "Ocio y Actividades", cantidad: 3.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-08T09:00:00.000Z" },
+        { id: 202, telefono: "600111222", tipo: "gasto", concepto: "Cafe manana", categoria: "Ocio y Actividades", cantidad: 3.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-10T09:00:00.000Z" },
+        { id: 203, telefono: "600111222", tipo: "gasto", concepto: "Cafe manana", categoria: "Ocio y Actividades", cantidad: 3.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-12T09:00:00.000Z" },
+        { id: 204, telefono: "600333444", tipo: "gasto", concepto: "Snack kiosco", categoria: "Alimentación", cantidad: 2.8, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-15T18:00:00.000Z" }
     ]
 };
 
@@ -1071,6 +1076,12 @@ function actualizarPreviewProrroga() {
     try {
         const lblDes = document.getElementById('lblProrrogaDesglose');
         if (lblDes && !document.getElementById('bloqueProrrogaJulio')) {
+            if (!esMetaCompartidaActiva()) {
+                lblDes.innerHTML = '';
+                lblDes.style.display = 'none';
+                return;
+            }
+            lblDes.style.display = '';
             const plan = planVivoParaProrroga();
             if (plan) {
                 const vivo = saldoVivoDePlan(plan, estado.mesSeleccionado);
@@ -1167,16 +1178,22 @@ function renderMetaAhorro() {
             document.getElementById('lblAmortSaldoPendiente').textContent = `${saldoVivo.toFixed(2)} €`;
             document.getElementById('lblAmortCuotaMes').textContent = `+${Number(cuotaEsteMes).toFixed(2)} €/mes`;
 
-            // Desglose mensual por miembro (cuota de este mes)
-            const rep = planActivo.reparto || obtenerRepartoMes(estado.mesSeleccionado);
-            const miembrosDesglose = Object.entries(estado.usuarios).map(([tel, nom]) => {
-                const pct = rep[tel] !== undefined ? rep[tel] : 50;
-                const cuotaM = (Number(cuotaEsteMes) * (pct / 100)).toFixed(2);
-                return `<strong>${nom}</strong>: +${cuotaM} €/mes (${pct}%)`;
-            }).join(' · ');
+            // Desglose mensual por miembro (cuota de este mes) - solo si compartida marcada.
+            const elDesgloseAmort = document.getElementById('lblAmortDesgloseMiembros');
+            if (!esMetaCompartidaActiva()) {
+                if (elDesgloseAmort) { elDesgloseAmort.innerHTML = ''; elDesgloseAmort.style.display = 'none'; }
+            } else {
+                if (elDesgloseAmort) elDesgloseAmort.style.display = '';
+                const rep = planActivo.reparto || obtenerRepartoMes(estado.mesSeleccionado);
+                const miembrosDesglose = Object.entries(estado.usuarios).map(([tel, nom]) => {
+                    const pct = rep[tel] !== undefined ? rep[tel] : 50;
+                    const cuotaM = (Number(cuotaEsteMes) * (pct / 100)).toFixed(2);
+                    return `<strong>${nom}</strong>: +${cuotaM} €/mes (${pct}%)`;
+                }).join(' · ');
 
-            document.getElementById('lblAmortDesgloseMiembros').innerHTML =
-                `💡 <strong>Aportación mensual requerida:</strong> ${miembrosDesglose || 'cuota única del hogar'}`;
+                document.getElementById('lblAmortDesgloseMiembros').innerHTML =
+                    `💡 <strong>Aportación mensual requerida:</strong> ${miembrosDesglose || 'cuota única del hogar'}`;
+            }
 
             // Aportado / retraso en directo: incluye lo ahorrado ESTE mes según lo añades
             // (65 € en agosto se ven como 65 de 150 al momento), no solo meses cerrados.
@@ -1335,6 +1352,7 @@ function renderMetaAhorro() {
         bannerDeficit.style.display = 'none';
         try { const sb = document.getElementById('sugerenciaAhorroBox'); if (sb) sb.style.display = 'none'; } catch (e) {}
         try { renderSugerenciaIndependiente(); } catch (e) {}
+        try { renderSugerenciaAhorro(0); } catch (e) {}
         renderMetaCompartidaUI();
         return;
     }
@@ -1383,7 +1401,11 @@ function renderMetaAhorro() {
                     try { actualizarDesgloseDeficitUI(); } catch (e) {}
                     try { actualizarCalculoProrrateo(); } catch (e) {}
                     try { renderSugerenciaAhorro(vivoC); } catch (e) {}
+                } else {
+                    try { renderSugerenciaAhorro(0); } catch (e) {}
                 }
+            } else {
+                try { renderSugerenciaAhorro(0); } catch (e) {}
             }
         } catch (e) {}
     } else {
@@ -1420,16 +1442,22 @@ function renderMetaAhorro() {
                         document.getElementById('lblDeficitImporte').textContent = `${vivoPF.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €`;
                         const elDes = document.getElementById('lblDeficitDesglose');
                         if (elDes) {
-                            const repPF = obtenerRepartoMes(estado.mesSeleccionado);
-                            const memPF = Object.entries(estado.usuarios);
-                            let htmlPF = '<strong>Desglose del déficit por miembro:</strong><ul class="deficit-desglose-list">';
-                            memPF.forEach(([tel, nom]) => {
-                                const pct = repPF[tel] !== undefined ? repPF[tel] : (memPF.length === 2 ? 50 : Math.floor(100 / memPF.length));
-                                const parte = (vivoPF * (pct / 100)).toFixed(2);
-                                htmlPF += `<li class="deficit-desglose-item"><span>👤 <strong>${nom}</strong> (${pct}%):</span> <strong style="color:var(--danger);">${parte} €</strong></li>`;
-                            });
-                            htmlPF += '</ul>';
-                            elDes.innerHTML = htmlPF;
+                            if (!esMetaCompartidaActiva()) {
+                                elDes.innerHTML = '';
+                                elDes.style.display = 'none';
+                            } else {
+                                elDes.style.display = '';
+                                const repPF = obtenerRepartoMes(estado.mesSeleccionado);
+                                const memPF = Object.entries(estado.usuarios);
+                                let htmlPF = '<strong>Desglose del déficit por miembro:</strong><ul class="deficit-desglose-list">';
+                                memPF.forEach(([tel, nom]) => {
+                                    const pct = repPF[tel] !== undefined ? repPF[tel] : (memPF.length === 2 ? 50 : Math.floor(100 / memPF.length));
+                                    const parte = (vivoPF * (pct / 100)).toFixed(2);
+                                    htmlPF += `<li class="deficit-desglose-item"><span>👤 <strong>${nom}</strong> (${pct}%):</span> <strong style="color:var(--danger);">${parte} €</strong></li>`;
+                                });
+                                htmlPF += '</ul>';
+                                elDes.innerHTML = htmlPF;
+                            }
                         }
                     }
                 }
@@ -1469,6 +1497,14 @@ function renderMetaAhorro() {
 function actualizarDesgloseDeficitUI() {
     const elDeficitDesglose = document.getElementById('lblDeficitDesglose');
     if (!elDeficitDesglose) return;
+
+    // Solo se muestra si Meta compartida está marcada (opt-in).
+    if (!esMetaCompartidaActiva()) {
+        elDeficitDesglose.innerHTML = '';
+        elDeficitDesglose.style.display = 'none';
+        return;
+    }
+    elDeficitDesglose.style.display = '';
 
     const meta = parseFloat(document.getElementById('inputMetaAhorro').value) || 0;
     const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
@@ -1527,7 +1563,7 @@ function actualizarCalculoProrrateo() {
                 const repartoP = obtenerRepartoMes(estado.mesSeleccionado);
                 const membersP = Object.entries(estado.usuarios);
                 let desgloseP = '';
-                if (membersP.length > 0) {
+                if (esMetaCompartidaActiva() && membersP.length > 0) {
                     desgloseP = ' (' + membersP.map(([tel, nom]) => {
                         const pct = repartoP[tel] !== undefined ? repartoP[tel] : 50;
                         const aporte = (cuotaMediaP * (pct / 100)).toFixed(2);
@@ -1580,7 +1616,7 @@ function actualizarCalculoProrrateo() {
     const members = Object.entries(estado.usuarios);
 
     let desgloseCuota = '';
-    if (members.length > 0) {
+    if (esMetaCompartidaActiva() && members.length > 0) {
         desgloseCuota = ' (' + members.map(([tel, nom]) => {
             const pct = reparto[tel] !== undefined ? reparto[tel] : 50;
             const aporte = (cuotaMedia * (pct / 100)).toFixed(2);
@@ -1668,38 +1704,173 @@ function formatearElegidosMaximo(elegidos) {
     }).join(' + ');
 }
 
+// Bloque 1/2 visual: la casilla "Meta compartida" es opt-in. El cálculo interno
+// sigue usando obtenerRepartoMes (50/50 por defecto), pero los desgloses con
+// porcentajes por miembro solo se pintan si el usuario la marcó.
+function esMetaCompartidaActiva() {
+    try {
+        return !!(estado.metasCompartidas && estado.metasCompartidas[estado.mesSeleccionado]);
+    } catch (e) { return false; }
+}
+
+function tieneMetaActual() {
+    try {
+        const m = estado.metasPorMes && estado.metasPorMes[estado.mesSeleccionado];
+        return m !== undefined && Number(m) > 0;
+    } catch (e) { return false; }
+}
+
+// Formato esquemático (solo visual): misma calc, sin párrafos largos.
+function sugerenciaEsquematicaHTML(calc, deficit) {
+    if (!calc || calc.sinGastos) {
+        return `<div class="intel-empty">Sin gastos donde recortar</div>`;
+    }
+    const elegidos = calc.elegidos || [];
+    const puntuales = (calc.puntuales || []).slice(0, 3);
+    const restante = calc.restante || 0;
+    if (!elegidos.length && !puntuales.length) {
+        return `<div class="intel-empty">Dentro de tu media</div>`;
+    }
+    let html = '';
+    elegidos.forEach(e => {
+        const maximo = Math.max(0, Math.round((e.gastado - e.corte) * 100) / 100);
+        const icono = (CATEGORIAS_CONFIG[e.cat] && CATEGORIAS_CONFIG[e.cat].icon) || '📁';
+        html += `<div class="intel-kpi-row"><span class="intel-kpi-cat">${icono} ${e.cat}</span><span class="intel-kpi-pills"><span class="pill-tope">baja a ${maximo.toFixed(2)} €</span><span class="pill-ahorro">ahorras ${e.corte.toFixed(2)} €</span><span class="pill-media">media ${e.media.toFixed(2)} €</span></span></div>`;
+    });
+    puntuales.forEach(p => {
+        const iconoP = (CATEGORIAS_CONFIG[p.cat] && CATEGORIAS_CONFIG[p.cat].icon) || '📁';
+        html += `<div class="intel-kpi-row"><span class="intel-kpi-cat">${iconoP} ${p.cat}</span><span class="intel-kpi-pills"><span class="pill-puntual">fue único: ${p.gastado.toFixed(2)} € · evita repetir</span></span></div>`;
+    });
+    if (restante > 0.005) {
+        html += `<div class="intel-kpi-row"><span class="intel-kpi-cat">Restante</span><span class="intel-kpi-pills"><span class="pill-alerta">aun así faltan ${restante.toFixed(2)} €</span></span></div>`;
+    }
+    void deficit;
+    return html;
+}
+
+function mantenimientoEsquematicoHTML(catsConMedia, nombrePrev) {
+    if (!catsConMedia || !catsConMedia.length) return `<div class="intel-empty">Al día ✅</div>`;
+    let html = '';
+    catsConMedia.slice(0, 3).forEach(([cat, media]) => {
+        const icono = (CATEGORIAS_CONFIG[cat] && CATEGORIAS_CONFIG[cat].icon) || '📁';
+        html += `<div class="intel-kpi-row"><span class="intel-kpi-cat">${icono} ${cat}</span><span class="intel-kpi-pills"><span class="pill-tope">no pases de ${Number(media).toFixed(2)} €</span></span></div>`;
+    });
+    void nombrePrev;
+    return html;
+}
+
+function tendenciasEsquematicasHTML(cambios) {
+    if (!cambios || !cambios.length) return `<div class="intel-empty">Sin subidas vs mes anterior</div>`;
+    const top = cambios.slice(0, 4);
+    let html = '';
+    top.forEach(c => {
+        const icono = (CATEGORIAS_CONFIG[c.cat] && CATEGORIAS_CONFIG[c.cat].icon) || '📁';
+        html += `<div class="trend-row"><span class="trend-cat">${icono} ${c.cat}</span><strong class="trend-importe">+${c.diff.toFixed(2)} €</strong></div>`;
+    });
+    if (cambios.length > 4) {
+        html += `<div class="trend-row"><span class="trend-cat">+${cambios.length - 4} más</span><strong class="trend-importe"></strong></div>`;
+    }
+    return html;
+}
+
+// Gastos hormiga (Bloque 3): microgastos, frecuencia y fantasmas. Solo visual nuevo,
+// no toca la lógica existente. Tono neutro, sin sermones.
+function normalizarConceptoHormiga(s) {
+    try {
+        return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim().slice(0, 30);
+    } catch (e) { return String(s || '').toLowerCase().trim().slice(0, 30); }
+}
+
+function detectarGastosHormiga(mesClave) {
+    try {
+        const partes = String(mesClave || '').split('-').map(Number);
+        const a = partes[0], m = partes[1];
+        if (!a || !m) return { total: 0, movs: [], porCategoria: {} };
+        const ops = obtenerOperacionesMes(a, m).filter(o => o && o.tipo === 'gasto');
+        const UMBRAL = 15;
+        const CATS_PROP = ['Alimentación', 'Ocio y Actividades', 'Otros', 'Salud y Cuidado', 'Transporte', 'Moda y Estética'];
+        const ids = new Set();
+        ops.forEach(o => {
+            const cant = Number(o.cantidad) || 0;
+            if (cant <= 0) return;
+            const cat = o.categoria || 'Otros';
+            const esFijo = !!o.esFijo;
+            if (!esFijo && cant <= UMBRAL && CATS_PROP.includes(cat)) ids.add(o.id);
+            else if (esFijo && cant <= 20 && CATS_PROP.includes(cat)) ids.add(o.id);
+        });
+        const porConcepto = {};
+        ops.forEach(o => {
+            const cant = Number(o.cantidad) || 0;
+            if (!(cant > 0 && cant <= 20) || o.esFijo) return;
+            const k = normalizarConceptoHormiga(o.concepto) + '|' + (o.categoria || '');
+            if (!k.trim()) return;
+            if (!porConcepto[k]) porConcepto[k] = [];
+            porConcepto[k].push(o);
+        });
+        Object.values(porConcepto).forEach(lista => {
+            if (lista.length < 3) return;
+            lista.sort((x, y) => String(x.fecha).localeCompare(String(y.fecha)));
+            for (let i = 0; i < lista.length; i++) {
+                for (let j = i + 2; j < lista.length; j++) {
+                    try {
+                        const d1 = new Date(lista[i].fecha);
+                        const d2 = new Date(lista[j].fecha);
+                        const diff = (d2 - d1) / (1000 * 60 * 60 * 24);
+                        if (diff <= 7) {
+                            for (let k = i; k <= j; k++) ids.add(lista[k].id);
+                            break;
+                        }
+                        if (diff > 7) break;
+                    } catch (e) {}
+                }
+            }
+        });
+        const movs = ops.filter(o => ids.has(o.id));
+        let total = 0;
+        const porCategoria = {};
+        movs.forEach(o => {
+            const c = Number(o.cantidad) || 0;
+            total += c;
+            porCategoria[o.categoria || 'Otros'] = (porCategoria[o.categoria || 'Otros'] || 0) + c;
+        });
+        total = Math.round(total * 100) / 100;
+        return { total, movs, porCategoria };
+    } catch (e) { return { total: 0, movs: [], porCategoria: {} }; }
+}
+
+function hormigaHTML(res) {
+    if (!res || !(res.total > 0)) return `<div class="intel-empty">Sin fugas hormiga</div>`;
+    const n = (res.movs || []).length;
+    let html = `<div class="intel-kpi-row"><span class="intel-kpi-cat">🐜 Fuga hormiga estimada</span><span class="intel-kpi-pills"><span class="pill-alerta">${res.total.toFixed(2)} € en ${n} movs</span></span></div>`;
+    html += `<details class="hormiga-details"><summary>Ver detalle</summary>`;
+    Object.entries(res.porCategoria || {}).sort((a, b) => b[1] - a[1]).forEach(([cat, imp]) => {
+        const icono = (CATEGORIAS_CONFIG[cat] && CATEGORIAS_CONFIG[cat].icon) || '📁';
+        html += `<div class="trend-row"><span class="trend-cat">${icono} ${cat}</span><strong class="trend-importe">${Number(imp).toFixed(2)} €</strong></div>`;
+    });
+    html += `</details>`;
+    return html;
+}
+
 function renderSugerenciaAhorro(deficit) {
-    const box = document.getElementById('sugerenciaAhorroBox');
-    if (!box) return;
+    // Visual Bloque 2.2: ya no sale dentro del cuadro naranja. Misma calc,
+    // solo cambia el destino y el formato esquemático.
+    try {
+        const oldBox = document.getElementById('sugerenciaAhorroBox');
+        if (oldBox) { oldBox.style.display = 'none'; oldBox.innerHTML = ''; }
+    } catch (e) {}
+    const card = document.getElementById('cardProyeccionBox');
+    if (!card) return;
+    if (!tieneMetaActual()) {
+        card.innerHTML = `<div class="intel-empty">No hay meta establecida</div>`;
+        return;
+    }
     if (!(deficit > 0)) {
-        box.style.display = 'none';
-        box.innerHTML = '';
+        card.innerHTML = `<div class="intel-empty">Al día ✅</div>`;
         return;
     }
     const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
     const calc = calcularSugerenciaParaMes(anio, mesNum, deficit);
-    if (calc.sinGastos) {
-        box.style.display = 'block';
-        box.innerHTML = `💡 No hay gastos este mes donde recortar: la meta supera los ingresos. Convendría revisar la meta.`;
-        return;
-    }
-    const { elegidos, puntuales, restante } = calc;
-    let html = `💡 <strong>Para el mes que viene</strong> (faltan <strong>${deficit.toFixed(2)} €</strong>): `;
-    if (elegidos.length > 0) {
-        html += formatearElegidosMaximo(elegidos) + '. ';
-    }
-    if (puntuales.length > 0) {
-        const top = puntuales.slice(0, 3);
-        html += `Ojo: ${top.map(p => `<strong>${p.cat} (${p.gastado.toFixed(2)} €)</strong>`).join(', ')} fue puntual y no debería repetirse. `;
-    }
-    if (elegidos.length === 0 && puntuales.length === 0) {
-        html += 'gastaste dentro de tu media en todo: convendría revisar la meta. ';
-    }
-    if (restante > 0.005) {
-        html += `Aun recortando todo, faltarían <strong>${restante.toFixed(2)} €</strong>: convendría revisar la meta.`;
-    }
-    box.innerHTML = html;
-    box.style.display = 'block';
+    card.innerHTML = sugerenciaEsquematicaHTML(calc, deficit);
 }
 
 function claveMesAnterior(clave) {
@@ -1723,28 +1894,42 @@ function nombreMesLargo(clave) {
 // Bloque independiente "Sugerencia de ahorro": en el mes actual enseña lo del
 // mes anterior para este mes. Siempre visible haya plan o no (genérico demo y
 // real). No depende del banner de déficit ni de la prórroga.
+// Visual Bloque 2.1: misma calc, formato esquemático en tarjeta.
 function renderSugerenciaIndependiente() {
     const banner = document.getElementById('bannerSugerencia');
     const box = document.getElementById('sugerenciaIndependienteBox');
     const lblMes = document.getElementById('lblSugerenciaMes');
-    if (!banner || !box) return;
+    const card = document.getElementById('cardSugerenciaBox');
+    const pintarVacio = (msg) => {
+        try { if (banner) banner.style.display = 'none'; } catch (e) {}
+        try { if (box) { box.innerHTML = ''; } } catch (e) {}
+        if (card) card.innerHTML = `<div class="intel-empty">${msg}</div>`;
+    };
+    if (!card) return;
+    // Condicionada a que exista meta actual (si no, estado limpio).
+    if (!tieneMetaActual()) {
+        pintarVacio('No hay meta establecida');
+        return;
+    }
+    if (!banner || !box) { pintarVacio('No hay meta establecida'); return; }
     const prev = claveMesAnterior(estado.mesSeleccionado);
-    if (!prev) { banner.style.display = 'none'; return; }
+    if (!prev) { pintarVacio('No hay meta establecida'); return; }
     const [pa, pm] = prev.split('-').map(Number);
-    if (!huboMovimientos(pa, pm)) { banner.style.display = 'none'; box.innerHTML = ''; return; }
+    if (!huboMovimientos(pa, pm)) { pintarVacio('No hay meta establecida'); try { if (banner) banner.style.display = 'none'; if (box) box.innerHTML = ''; } catch (e) {} return; }
     const metaPrev = (estado.metasPorMes && estado.metasPorMes[prev] !== undefined) ? Number(estado.metasPorMes[prev]) : 0;
     const balPrev = balanceDeMesClave(prev);
     const deficitPrev = metaPrev > 0 ? Math.round((metaPrev - balPrev) * 100) / 100 : 0;
     const actualPrev = gastosMovimientosPorCategoria(pa, pm);
-    if (Object.keys(actualPrev).length === 0) { banner.style.display = 'none'; box.innerHTML = ''; return; }
+    if (Object.keys(actualPrev).length === 0) { pintarVacio('Sin datos previos'); try { if (banner) banner.style.display = 'none'; if (box) box.innerHTML = ''; } catch (e) {} return; }
     if (lblMes) lblMes.textContent = `· basada en ${nombreMesLargo(prev)} para ${nombreMesLargo(estado.mesSeleccionado)}`;
+    // Ocultar el banner largo antiguo: ahora vive en la tarjeta.
+    try { if (banner) banner.style.display = 'none'; if (box) box.innerHTML = ''; } catch (e) {}
     // Si el mes anterior cumplió, mensaje de mantenimiento (sigue siendo útil y llamativo).
     if (!(deficitPrev > 0.005)) {
         const calc0 = calcularSugerenciaParaMes(pa, pm, 0);
         // Top categorías del mes anterior para no superar la media este mes.
         const cats = Object.entries(actualPrev).sort((a, b) => b[1] - a[1]).slice(0, 3);
-        let html0 = `En <strong>${nombreMesLargo(prev)}</strong> cumpliste la meta. Para mantenerlo este mes: `;
-        html0 += cats.map(([cat, gastado]) => {
+        const conMedia = cats.map(([cat, gastado]) => {
             // Media habitual de esa categoría (3 previos al anterior).
             let suma = 0, n = 0;
             const cur = new Date(pa, pm - 2, 1);
@@ -1754,30 +1939,14 @@ function renderSugerenciaIndependiente() {
                 cur.setMonth(cur.getMonth() - 1);
             }
             const media = n > 0 ? suma / n : gastado;
-            return `no pases de <strong>${media.toFixed(2)} € en ${cat}</strong> (tu media es ${media.toFixed(2)} €)`;
-        }).join(' · ') + '.';
+            return [cat, media];
+        });
         void calc0;
-        box.innerHTML = html0;
-        banner.style.display = 'block';
+        card.innerHTML = mantenimientoEsquematicoHTML(conMedia, prev);
         return;
     }
     const calc = calcularSugerenciaParaMes(pa, pm, deficitPrev);
-    let html = `Con lo de <strong>${nombreMesLargo(prev)}</strong> (faltaron <strong>${deficitPrev.toFixed(2)} €</strong>), este mes: `;
-    if (calc.elegidos.length > 0) {
-        html += formatearElegidosMaximo(calc.elegidos) + '. ';
-    }
-    if (calc.puntuales.length > 0) {
-        const top = calc.puntuales.slice(0, 3);
-        html += `Ojo: ${top.map(p => `<strong>${p.cat} (${p.gastado.toFixed(2)} €)</strong>`).join(', ')} fue puntual y no debería repetirse. `;
-    }
-    if (calc.elegidos.length === 0 && calc.puntuales.length === 0) {
-        html += 'gastaste dentro de tu media en todo: convendría revisar la meta. ';
-    }
-    if (calc.restante > 0.005) {
-        html += `Aun recortando todo, faltarían <strong>${calc.restante.toFixed(2)} €</strong>: convendría revisar la meta.`;
-    }
-    box.innerHTML = html;
-    banner.style.display = 'block';
+    card.innerHTML = sugerenciaEsquematicaHTML(calc, deficitPrev);
 }
 
 function alCambiarInputMetaAhorro() {
@@ -1841,6 +2010,25 @@ function alCambiarInputMetaAhorro() {
 
     actualizarDesgloseDeficitUI();
     actualizarCalculoProrrateo();
+    // Proyección en vivo mientras se escribe (misma calc, solo visual).
+    try {
+        const cardLive = document.getElementById('cardProyeccionBox');
+        if (cardLive) {
+            if (!(metaTotal > 0)) {
+                cardLive.innerHTML = `<div class="intel-empty">No hay meta establecida</div>`;
+            } else {
+                const balLive = balanceDeMesClave(estado.mesSeleccionado);
+                const defLive = Math.round((metaTotal - balLive) * 100) / 100;
+                if (!(defLive > 0.005)) {
+                    cardLive.innerHTML = `<div class="intel-empty">Al día ✅</div>`;
+                } else {
+                    const partesLive = estado.mesSeleccionado.split('-').map(Number);
+                    const calcLive = calcularSugerenciaParaMes(partesLive[0], partesLive[1], defLive);
+                    cardLive.innerHTML = sugerenciaEsquematicaHTML(calcLive, defLive);
+                }
+            }
+        }
+    } catch (e) {}
 }
 
 function actualizarMetaConAporteExtra() {
@@ -2086,6 +2274,11 @@ function toggleMetaCompartida() {
             try { if (typeof programarSubidaNube === 'function') programarSubidaNube(true); } catch (e) {}
         }
         renderMetaCompartidaUI();
+        // Al activar, los desgloses aparecen en vivo con el déficit actual.
+        try { actualizarDesgloseDeficitUI(); } catch (e) {}
+        try { actualizarCalculoProrrateo(); } catch (e) {}
+        try { actualizarPreviewProrroga(); } catch (e) {}
+        try { renderMetaAhorro(); } catch (e) {}
     } else {
         sec.style.display = 'none';
         if (estado.metasCompartidas) {
@@ -2268,33 +2461,33 @@ function renderSpikeBanner() {
     });
 
     const bannerSpike = document.getElementById('bannerSpike');
-    // Sin gastos el mes anterior no hay con qué comparar: no sale nada.
+    const card = document.getElementById('cardTendenciasBox');
+    // Banner largo antiguo siempre oculto: ahora vive en la tarjeta compacta.
+    try { if (bannerSpike) bannerSpike.style.display = 'none'; } catch (e) {}
+    if (!card) return;
+    // Tendencias + hormiga siempre visibles, haya o no meta. Hormiga en Bloque 3.
+    let htmlTend = '';
     if (!hayGastoPrev) {
-        bannerSpike.style.display = 'none';
-        return;
-    }
-
-    const cambios = [];
-    for (const [cat, gastado] of Object.entries(gastosCatActual)) {
-        const diff = gastado - (gastosCatAnterior[cat] || 0);
-        if (diff >= 0.01) {
-            cambios.push({ cat, diff });
-        }
-    }
-
-    cambios.sort((a, b) => b.diff - a.diff);
-
-    if (cambios.length > 0) {
-        bannerSpike.style.display = 'block';
-        const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-        const nombreMesAnt = nombresMeses[mesAnt - 1];
-        document.getElementById('lblSpikeTexto').innerHTML =
-            cambios.map(c => {
-                return `En <strong>"${c.cat}"</strong> habéis gastado <strong>${c.diff.toFixed(2)} € más que en ${nombreMesAnt}</strong>.`;
-            }).join('<br>');
+        htmlTend = `<div class="intel-empty">Sin datos del mes anterior</div>`;
     } else {
-        bannerSpike.style.display = 'none';
+        const cambios = [];
+        for (const [cat, gastado] of Object.entries(gastosCatActual)) {
+            const diff = gastado - (gastosCatAnterior[cat] || 0);
+            if (diff >= 0.01) {
+                cambios.push({ cat, diff });
+            }
+        }
+        cambios.sort((a, b) => b.diff - a.diff);
+        htmlTend = tendenciasEsquematicasHTML(cambios);
     }
+    let htmlHormiga = '';
+    try {
+        const resH = detectarGastosHormiga(estado.mesSeleccionado);
+        htmlHormiga = `<div class="hormiga-sep"></div>` + hormigaHTML(resH);
+    } catch (e) {
+        htmlHormiga = '';
+    }
+    card.innerHTML = htmlTend + htmlHormiga;
 }
 
 // ==========================================================================
