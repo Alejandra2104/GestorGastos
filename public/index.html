@@ -50,7 +50,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="style.css?v=1.9.13">
+    <link rel="stylesheet" href="style.css?v=1.9.14">
     <style>
       /* Banner de instalación PWA + estado offline (ligero, no depende de style.css) */
       #pwaInstallBar{display:none;position:sticky;top:0;z-index:900;background:linear-gradient(135deg,#6d28d9,#a855f7);color:#fff;padding:10px 14px;font-size:.88rem;box-shadow:0 4px 14px rgba(124,58,237,.4)}
@@ -355,6 +355,16 @@
                         <!-- Sugerencia de ahorro por categorías (prueba) -->
                         <div id="sugerenciaAhorroBox" style="display:none; margin-top:10px;"></div>
                     </div>
+                </div>
+
+                <!-- Sugerencia de ahorro independiente: lo del mes anterior para este mes. Siempre visible haya plan o no. -->
+                <div id="bannerSugerencia" class="banner banner-sugerencia" style="display:none;">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:1rem;">
+                        <span style="font-size:1.3rem;">💡</span>
+                        <strong style="font-size:1.02rem;letter-spacing:.2px;">Sugerencia de ahorro</strong>
+                        <span id="lblSugerenciaMes" style="font-size:.82rem;font-weight:600;opacity:.85;"></span>
+                    </div>
+                    <div id="sugerenciaIndependienteBox" style="font-size:.86rem;margin-top:8px;line-height:1.5;"></div>
                 </div>
 
                 <div id="bannerSpike" class="banner banner-advice">
@@ -695,7 +705,7 @@
                 <hr style="border: none; border-top: 1px solid var(--border-color); margin: 24px 0;">
 
                 <p style="font-size:.8rem;color:var(--text-secondary);margin:0">
-                    📦 Versión <strong>1.9.13</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
+                    📦 Versión <strong>1.9.14</strong> · La app se actualiza sola al abrirla con internet: si aparece el aviso “Hay una nueva versión”, pulsa <strong>Actualizar</strong> (no hay que reinstalar ni se pierden datos).
                 </p>
             </div>
         </main>
@@ -912,9 +922,9 @@
     </div>
 
     <!-- Script Principal de la Aplicación -->
-    <script src="app.js?v=1.9.13"></script>
+    <script src="app.js?v=1.9.14"></script>
     <script src="nube-config.js"></script>
-    <script src="nube.js?v=1.9.13"></script>
+    <script src="nube.js?v=1.9.14"></script>
     <script>
     // Lógica de instalación PWA separada del negocio (funciona en todos los navegadores)
     (function(){

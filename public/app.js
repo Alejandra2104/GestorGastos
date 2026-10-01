@@ -1334,6 +1334,7 @@ function renderMetaAhorro() {
         bannerCelebracion.style.display = 'none';
         bannerDeficit.style.display = 'none';
         try { const sb = document.getElementById('sugerenciaAhorroBox'); if (sb) sb.style.display = 'none'; } catch (e) {}
+        try { renderSugerenciaIndependiente(); } catch (e) {}
         renderMetaCompartidaUI();
         return;
     }
@@ -1381,6 +1382,7 @@ function renderMetaAhorro() {
                     if (prC) prC.style.display = '';
                     try { actualizarDesgloseDeficitUI(); } catch (e) {}
                     try { actualizarCalculoProrrateo(); } catch (e) {}
+                    try { renderSugerenciaAhorro(vivoC); } catch (e) {}
                 }
             }
         } catch (e) {}
@@ -1405,9 +1407,10 @@ function renderMetaAhorro() {
         document.getElementById('lblDeficitImporte').textContent = `${deficit.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €`;
         actualizarDesgloseDeficitUI();
         // Prórroga pedida: el bloque naranja muestra el SALDO VIVO (lo que debes
-        // de verdad) en importe + desglose, para que cuadre con la preview
-        // (ej: 85 € → 42.50 cada uno en 2 meses). La sugerencia sigue con el
-        // desfase del mes. Así el cuadro de abajo sí se actualiza en directo.
+        // de verdad) en importe + desglose + sugerencia, para que cuadre con la
+        // preview (ej: 85 € → 42.50 cada uno en 2 meses). Todo en vivo: al darle
+        // a Prorrogar ya es último mes y tiene sentido que se mueva con cada
+        // ingreso/gasto. Genérico demo y real.
         if (prorrogaForzada) {
             try {
                 const planPF = planVivoParaProrroga();
@@ -1444,9 +1447,22 @@ function renderMetaAhorro() {
             if (prControls) prControls.style.display = 'none';
             if (prDetalle) prDetalle.innerHTML = `📌 Este desfase de <strong>${deficit.toFixed(2)} €</strong> se acumula al plan actual y se ajustará en la prórroga al terminar. Este mes solo debes la cuota.`;
         }
-        try { renderSugerenciaAhorro(deficit); } catch (e) {}
+        // Sugerencia en vivo cuando hay prórroga pedida (usa el vivo, no el
+        // desfase del mes). Si no, usa el desfase del mes.
+        try {
+            if (prorrogaForzada) {
+                const planPS = planVivoParaProrroga();
+                const vivoPS = planPS ? saldoVivoDePlan(planPS, estado.mesSeleccionado) : deficit;
+                renderSugerenciaAhorro(vivoPS > 0.005 ? vivoPS : deficit);
+            } else {
+                renderSugerenciaAhorro(deficit);
+            }
+        } catch (e) {
+            try { renderSugerenciaAhorro(deficit); } catch (e2) {}
+        }
     }
 
+    try { renderSugerenciaIndependiente(); } catch (e) {}
     renderMetaCompartidaUI();
 }
 
@@ -1601,24 +1617,10 @@ function huboMovimientos(anio, mesNum1Indexed) {
     return (estado.transacciones || []).some(t => t && typeof t.fecha === 'string' && t.fecha.substring(0, 7) === clave);
 }
 
-function renderSugerenciaAhorro(deficit) {
-    const box = document.getElementById('sugerenciaAhorroBox');
-    if (!box) return;
-    if (!(deficit > 0)) {
-        box.style.display = 'none';
-        box.innerHTML = '';
-        return;
-    }
-    const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
+function calcularSugerenciaParaMes(anio, mesNum, deficit) {
     const actual = gastosMovimientosPorCategoria(anio, mesNum);
     const catsActuales = Object.entries(actual).sort((a, b) => b[1] - a[1]);
-    if (catsActuales.length === 0) {
-        box.style.display = 'block';
-        box.innerHTML = `💡 No hay gastos este mes donde recortar: la meta supera los ingresos. Convendría revisar la meta.`;
-        return;
-    }
-
-    // Hasta 3 meses anteriores con movimientos para la "media habitual".
+    if (catsActuales.length === 0) return { elegidos: [], puntuales: [], restante: deficit, sinGastos: true };
     const mesesPrev = [];
     const cursor = new Date(anio, mesNum - 2, 1);
     for (let i = 0; i < 3; i++) {
@@ -1627,7 +1629,6 @@ function renderSugerenciaAhorro(deficit) {
         if (huboMovimientos(a, m)) mesesPrev.push({ a, m });
         cursor.setMonth(cursor.getMonth() - 1);
     }
-
     const recortes = [];
     const puntuales = [];
     catsActuales.forEach(([cat, gastado]) => {
@@ -1649,7 +1650,6 @@ function renderSugerenciaAhorro(deficit) {
     });
     recortes.sort((a, b) => b.exceso - a.exceso);
     puntuales.sort((a, b) => b.gastado - a.gastado);
-
     let restante = deficit;
     const elegidos = [];
     recortes.forEach(r => {
@@ -1658,12 +1658,35 @@ function renderSugerenciaAhorro(deficit) {
         restante = Math.round((restante - corte) * 100) / 100;
         elegidos.push({ cat: r.cat, corte, gastado: r.gastado, media: r.media });
     });
+    return { elegidos, puntuales, restante, sinGastos: false };
+}
 
+function formatearElegidosMaximo(elegidos) {
+    return elegidos.map(e => {
+        const maximo = Math.max(0, Math.round((e.gastado - e.corte) * 100) / 100);
+        return `podrías gastar como máximo <strong>${maximo.toFixed(2)} € en ${e.cat}</strong>, ahorrarías <strong>${e.corte.toFixed(2)} €</strong> (tu media es ${e.media.toFixed(2)} €)`;
+    }).join(' + ');
+}
+
+function renderSugerenciaAhorro(deficit) {
+    const box = document.getElementById('sugerenciaAhorroBox');
+    if (!box) return;
+    if (!(deficit > 0)) {
+        box.style.display = 'none';
+        box.innerHTML = '';
+        return;
+    }
+    const [anio, mesNum] = estado.mesSeleccionado.split('-').map(Number);
+    const calc = calcularSugerenciaParaMes(anio, mesNum, deficit);
+    if (calc.sinGastos) {
+        box.style.display = 'block';
+        box.innerHTML = `💡 No hay gastos este mes donde recortar: la meta supera los ingresos. Convendría revisar la meta.`;
+        return;
+    }
+    const { elegidos, puntuales, restante } = calc;
     let html = `💡 <strong>Para el mes que viene</strong> (faltan <strong>${deficit.toFixed(2)} €</strong>): `;
     if (elegidos.length > 0) {
-        html += 'podrías recortar ' + elegidos.map(e =>
-            `<strong>${e.corte.toFixed(2)} € en ${e.cat}</strong> (gastaste ${e.gastado.toFixed(2)} €, tu media es ${e.media.toFixed(2)} €)`
-        ).join(' + ') + '. ';
+        html += formatearElegidosMaximo(elegidos) + '. ';
     }
     if (puntuales.length > 0) {
         const top = puntuales.slice(0, 3);
@@ -1677,6 +1700,84 @@ function renderSugerenciaAhorro(deficit) {
     }
     box.innerHTML = html;
     box.style.display = 'block';
+}
+
+function claveMesAnterior(clave) {
+    try {
+        const [a, m] = String(clave).split('-').map(Number);
+        if (!a || !m) return null;
+        const d = new Date(a, m - 2, 1);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    } catch (e) { return null; }
+}
+
+function nombreMesLargo(clave) {
+    try {
+        const nombres = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const [a, m] = String(clave).split('-').map(Number);
+        if (!a || !m) return String(clave);
+        return `${nombres[m - 1]} ${a}`;
+    } catch (e) { return String(clave); }
+}
+
+// Bloque independiente "Sugerencia de ahorro": en el mes actual enseña lo del
+// mes anterior para este mes. Siempre visible haya plan o no (genérico demo y
+// real). No depende del banner de déficit ni de la prórroga.
+function renderSugerenciaIndependiente() {
+    const banner = document.getElementById('bannerSugerencia');
+    const box = document.getElementById('sugerenciaIndependienteBox');
+    const lblMes = document.getElementById('lblSugerenciaMes');
+    if (!banner || !box) return;
+    const prev = claveMesAnterior(estado.mesSeleccionado);
+    if (!prev) { banner.style.display = 'none'; return; }
+    const [pa, pm] = prev.split('-').map(Number);
+    if (!huboMovimientos(pa, pm)) { banner.style.display = 'none'; box.innerHTML = ''; return; }
+    const metaPrev = (estado.metasPorMes && estado.metasPorMes[prev] !== undefined) ? Number(estado.metasPorMes[prev]) : 0;
+    const balPrev = balanceDeMesClave(prev);
+    const deficitPrev = metaPrev > 0 ? Math.round((metaPrev - balPrev) * 100) / 100 : 0;
+    const actualPrev = gastosMovimientosPorCategoria(pa, pm);
+    if (Object.keys(actualPrev).length === 0) { banner.style.display = 'none'; box.innerHTML = ''; return; }
+    if (lblMes) lblMes.textContent = `· basada en ${nombreMesLargo(prev)} para ${nombreMesLargo(estado.mesSeleccionado)}`;
+    // Si el mes anterior cumplió, mensaje de mantenimiento (sigue siendo útil y llamativo).
+    if (!(deficitPrev > 0.005)) {
+        const calc0 = calcularSugerenciaParaMes(pa, pm, 0);
+        // Top categorías del mes anterior para no superar la media este mes.
+        const cats = Object.entries(actualPrev).sort((a, b) => b[1] - a[1]).slice(0, 3);
+        let html0 = `En <strong>${nombreMesLargo(prev)}</strong> cumpliste la meta. Para mantenerlo este mes: `;
+        html0 += cats.map(([cat, gastado]) => {
+            // Media habitual de esa categoría (3 previos al anterior).
+            let suma = 0, n = 0;
+            const cur = new Date(pa, pm - 2, 1);
+            for (let i = 0; i < 3; i++) {
+                const a = cur.getFullYear(), m = cur.getMonth() + 1;
+                if (huboMovimientos(a, m)) { suma += (gastosMovimientosPorCategoria(a, m)[cat] || 0); n++; }
+                cur.setMonth(cur.getMonth() - 1);
+            }
+            const media = n > 0 ? suma / n : gastado;
+            return `no pases de <strong>${media.toFixed(2)} € en ${cat}</strong> (tu media es ${media.toFixed(2)} €)`;
+        }).join(' · ') + '.';
+        void calc0;
+        box.innerHTML = html0;
+        banner.style.display = 'block';
+        return;
+    }
+    const calc = calcularSugerenciaParaMes(pa, pm, deficitPrev);
+    let html = `Con lo de <strong>${nombreMesLargo(prev)}</strong> (faltaron <strong>${deficitPrev.toFixed(2)} €</strong>), este mes: `;
+    if (calc.elegidos.length > 0) {
+        html += formatearElegidosMaximo(calc.elegidos) + '. ';
+    }
+    if (calc.puntuales.length > 0) {
+        const top = calc.puntuales.slice(0, 3);
+        html += `Ojo: ${top.map(p => `<strong>${p.cat} (${p.gastado.toFixed(2)} €)</strong>`).join(', ')} fue puntual y no debería repetirse. `;
+    }
+    if (calc.elegidos.length === 0 && calc.puntuales.length === 0) {
+        html += 'gastaste dentro de tu media en todo: convendría revisar la meta. ';
+    }
+    if (calc.restante > 0.005) {
+        html += `Aun recortando todo, faltarían <strong>${calc.restante.toFixed(2)} €</strong>: convendría revisar la meta.`;
+    }
+    box.innerHTML = html;
+    banner.style.display = 'block';
 }
 
 function alCambiarInputMetaAhorro() {

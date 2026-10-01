@@ -6,7 +6,7 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.9.13
+**Versión documentada:** v1.9.14
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
 > Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.9.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
@@ -202,6 +202,11 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Fallos:** al pulsar `Prorrogar` salía `¿En cuántos meses quieres absorberlo?` en la misma línea con `Elige meses… + Aplicar`, distinto de julio; al dar a `Aplicar` el cuadro naranja de abajo no se actualizaba (seguía `se acumula al plan actual…` con 75 € / 37.50).
 * **Cambios (genéricos demo y real):** eliminado `bloqueProrrogaJulio` en línea en `public/index.html`; `Prorrogar` activa abajo el bloque naranja (`bannerDeficit`: `¿Deseáis amortizar este desfase en: + Aplicar`, en vertical); nuevo flag `prorrogaSolicitadaMes` + `esProrrogaSolicitada()` / `planVivoParaProrroga()` / `esFinParaProrroga()`; `actualizarCalculoProrrateo()` en modo prórroga pinta sobre saldo vivo con formato julio (`Para absorber el desfase en 2 meses, +42.50 €/mes, 21.25 cada uno. Se sumará al plan único actual (ahora debes 85.00 €)…`); `aplicarPlanProrrateo()` en modo prórroga delega a `extenderPlanConSaldoVivo()` (reparte vivo, sin duplicar); `renderMetaAhorro()` fuerza controles + importe/desglose en vivo abajo; compat con `actualizarPreviewProrroga()` / `aplicarProrrogaElegida()` como envoltorios.
 * **Versión:** app → v1.9.13, SW → v1.8.25. Verificado con `node --check` + simulación (85/2=42.50, 21.25 por miembro) y push a `main`.
+
+### S27 — Sugerencia viva + bloque independiente v1.9.14 (01/10/2026, pedido por Alejandra)
+* **Fallos:** la sugerencia `Para el mes que viene (faltan 75 €): recorta 3.33 en Transporte… faltarían 71.67` no se actualizaba al darle a `Prorrogar` (debería poner 85 en vivo); iba dentro del naranja y solo con déficit; texto `recorta X` poco accionable.
+* **Cambios (genéricos demo y real):** `renderSugerenciaAhorro()` usa saldo vivo en modo prórroga (85, en vivo con cada ingreso/gasto) y nuevo formato `podrías gastar como máximo X € en CAT, ahorrarías Y € (tu media es Z €)` (solo recorta donde `gastado > media` de hasta 3 meses previos, solo gasto sin fijos/ingresos); nuevo `bannerSugerencia` independiente en `public/index.html` + `banner-sugerencia` llamativo en `style.css` con título `💡 Sugerencia de ahorro`; nueva `renderSugerenciaIndependiente()` (con `claveMesAnterior()` / `nombreMesLargo()` / `calcularSugerenciaParaMes()`): en el mes actual enseña lo del anterior para este mes, siempre visible haya plan o no (si cumplió, mensaje de mantenimiento con topes por media).
+* **Versión:** app → v1.9.14, SW → v1.8.26. Verificado con `node --check` y push a `main`.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
