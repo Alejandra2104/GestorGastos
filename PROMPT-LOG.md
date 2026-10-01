@@ -6,7 +6,7 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.9.12
+**Versión documentada:** v1.9.13
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
 > Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.9.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
@@ -197,6 +197,11 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Fallos:** en septiembre con ingreso de 80 € el banner decía `quedan 5 €` pero `Plan terminado, quedan 85.00 € de deuda` no se movía; al darle a `Prorrogar` salía un desplegable en línea sin desglose ni vista previa de cuota por meses, distinto del bloque de julio `Déficit + Desglose + ¿Deseáis amortizar en…?`.
 * **Cambios (genéricos, valen para demo y real sin mezclar datos):** nuevo `saldoVivoDePlan()` en `public/app.js` (`saldoPendiente - lo de este mes`); `lblProrrogaDeuda` y `lblAmortSaldoPendiente` pintan el mismo vivo y se mueven con cada ingreso/gasto; `boxProrrogaFinal` en `public/index.html` añade `lblProrrogaDesglose` + `lblProrrogaPreview` y `selectMesesProrroga` con `onchange`; nueva `actualizarPreviewProrroga()` con desglose por miembro y `cuota = vivo / meses` igual que el déficit; `aplicarProrrogaElegida()` reparte el vivo (ej: 85-80=5) y el guardado cuadra al cerrar el mes. Sin tocar blindaje demo ni nube.
 * **Versión:** app → v1.9.12, SW → v1.8.24. Verificado con `node --check` + simulación (sep+80=5, ago 65/75=10, preview 2m=2.50) y push a `main`.
+
+### S26 — Prórroga al bloque naranja v1.9.13 (01/10/2026, pedido por Alejandra)
+* **Fallos:** al pulsar `Prorrogar` salía `¿En cuántos meses quieres absorberlo?` en la misma línea con `Elige meses… + Aplicar`, distinto de julio; al dar a `Aplicar` el cuadro naranja de abajo no se actualizaba (seguía `se acumula al plan actual…` con 75 € / 37.50).
+* **Cambios (genéricos demo y real):** eliminado `bloqueProrrogaJulio` en línea en `public/index.html`; `Prorrogar` activa abajo el bloque naranja (`bannerDeficit`: `¿Deseáis amortizar este desfase en: + Aplicar`, en vertical); nuevo flag `prorrogaSolicitadaMes` + `esProrrogaSolicitada()` / `planVivoParaProrroga()` / `esFinParaProrroga()`; `actualizarCalculoProrrateo()` en modo prórroga pinta sobre saldo vivo con formato julio (`Para absorber el desfase en 2 meses, +42.50 €/mes, 21.25 cada uno. Se sumará al plan único actual (ahora debes 85.00 €)…`); `aplicarPlanProrrateo()` en modo prórroga delega a `extenderPlanConSaldoVivo()` (reparte vivo, sin duplicar); `renderMetaAhorro()` fuerza controles + importe/desglose en vivo abajo; compat con `actualizarPreviewProrroga()` / `aplicarProrrogaElegida()` como envoltorios.
+* **Versión:** app → v1.9.13, SW → v1.8.25. Verificado con `node --check` + simulación (85/2=42.50, 21.25 por miembro) y push a `main`.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
