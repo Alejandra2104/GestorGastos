@@ -910,6 +910,20 @@ function aportadoDePlan(plan) {
     return redondear2(total - (Number(plan.saldoPendiente) || 0));
 }
 
+// Saldo en vivo: lo guardado menos lo de este mes (sin contar dos veces lo ya
+// aplicado). Es la misma cifra del banner, para que prórroga y banner vayan a
+// la par en demo y en real. No toca el guardado: solo informa.
+function saldoVivoDePlan(plan, mesClave) {
+    if (!plan) return 0;
+    try {
+        migrarPlanViejo(plan);
+        const balRaw = balanceDeMesClave(mesClave);
+        const aplicadoYa = Number((plan.pagosAplicados && plan.pagosAplicados[mesClave]) || 0);
+        const balVivo = Math.max(0, redondear2(balRaw - aplicadoYa));
+        return Math.max(0, redondear2(Number(plan.saldoPendiente || 0) - balVivo));
+    } catch (e) { return Number(plan.saldoPendiente || 0); }
+}
+
 function esFinDePlan(plan, mesActual) {
     if (!plan || !plan.mesesLista || !plan.mesesLista.length) return false;
     const ultimo = plan.mesesLista[plan.mesesLista.length - 1];
@@ -963,15 +977,75 @@ function liquidarPlanYLiberarMetas(plan, mesReferencia, silencioso) {
 }
 
 // Prórroga en dos pasos: texto + botón Prorrogar, y al pulsarlo sale el bloque
-// de julio (meses + Aplicar Plan de Recuperación). Sin mes por defecto.
+// con desglose por miembro + meses + vista previa de cuota (igual que el déficit
+// de julio). Sin mes por defecto. Genérico: vale para demo y para real.
 function mostrarBloqueProrroga() {
     const bloque = document.getElementById('bloqueProrrogaJulio');
     const btn = document.getElementById('btnProrrogar');
     if (bloque) bloque.style.display = 'block';
     if (btn) btn.style.display = 'none';
+    try { actualizarPreviewProrroga(); } catch (e) {}
 }
 
-// Cálculo correcto: cuota = lo que quede / meses nuevos (no entre el total).
+// Vista previa de la prórroga sobre el SALDO VIVO (no el guardado), con el mismo
+// formato que el déficit: cuota total + reparto por miembro según meses elegidos.
+function actualizarPreviewProrroga() {
+    const lblPrev = document.getElementById('lblProrrogaPreview');
+    const lblDes = document.getElementById('lblProrrogaDesglose');
+    let plan = null;
+    try { plan = obtenerPlanAmortizacionActivo(estado.mesSeleccionado) || obtenerUnicoPlanVivo(); } catch (e) {}
+    if (!plan) {
+        if (lblPrev) lblPrev.innerHTML = '';
+        if (lblDes) lblDes.innerHTML = '';
+        return;
+    }
+    const vivo = saldoVivoDePlan(plan, estado.mesSeleccionado);
+    try {
+        if (lblDes) {
+            if (!(vivo > 0.005)) { lblDes.innerHTML = ''; }
+            else {
+                const reparto = obtenerRepartoMes(estado.mesSeleccionado);
+                const members = Object.entries(estado.usuarios);
+                let html = '<strong>Desglose por miembro:</strong><ul class="deficit-desglose-list">';
+                members.forEach(([tel, nom]) => {
+                    const pct = reparto[tel] !== undefined ? reparto[tel] : (members.length === 2 ? 50 : Math.floor(100 / members.length));
+                    const parte = (vivo * (pct / 100)).toFixed(2);
+                    html += `<li class="deficit-desglose-item"><span>👤 <strong>${nom}</strong> (${pct}%):</span> <strong style="color:var(--danger);">${parte} €</strong></li>`;
+                });
+                html += '</ul>';
+                lblDes.innerHTML = html;
+            }
+        }
+    } catch (e) {}
+    if (!lblPrev) return;
+    if (!(vivo > 0.005)) {
+        lblPrev.innerHTML = '✅ Con lo de este mes ya está saldado: no hace falta prorrogar.';
+        return;
+    }
+    const sel = document.getElementById('selectMesesProrroga');
+    const meses = sel ? parseInt(sel && sel.value) : NaN;
+    if (![2, 4, 6, 8, 12].includes(meses)) {
+        lblPrev.innerHTML = 'Elige en cuántos meses (2, 4, 6, 8 o 12) para ver la cuota.';
+        return;
+    }
+    const cuotaMedia = vivo / meses;
+    const reparto = obtenerRepartoMes(estado.mesSeleccionado);
+    const members = Object.entries(estado.usuarios);
+    let desgloseCuota = '';
+    if (members.length > 0) {
+        desgloseCuota = ' (' + members.map(([tel, nom]) => {
+            const pct = reparto[tel] !== undefined ? reparto[tel] : 50;
+            const aporte = (cuotaMedia * (pct / 100)).toFixed(2);
+            return `${nom}: <strong>+${aporte} €/mes</strong>`;
+        }).join(', ') + ')';
+    }
+    lblPrev.innerHTML = `💡 Para absorber <strong>${vivo.toFixed(2)} €</strong> en <strong>${meses} meses</strong>, cuota de <strong>+${cuotaMedia.toFixed(2)} €/mes</strong>${desgloseCuota}.`;
+}
+
+// Cálculo correcto: cuota = lo que quede EN VIVO / meses nuevos (no entre el total
+// guardado). Así la prórroga reparte lo que debes de verdad con lo de este mes
+// (ej: 85 guardados - 80 de este mes = 5 a prorrogar). El guardado se concilia
+// al cerrar el mes y cuadra con las nuevas cuotas. Vale para demo y real.
 function aplicarProrrogaElegida() {
     const plan = obtenerUnicoPlanVivo();
     if (!plan) {
@@ -985,8 +1059,9 @@ function aplicarProrrogaElegida() {
         mostrarToast('Elige en cuántos meses: 2, 4, 6, 8 o 12', 'danger');
         return;
     }
-    if (!(plan.saldoPendiente > 0.01)) {
-        mostrarToast('El plan ya está saldado', 'info');
+    const saldoVivo = saldoVivoDePlan(plan, estado.mesSeleccionado);
+    if (!(saldoVivo > 0.01)) {
+        mostrarToast('Con lo de este mes ya está saldado: no hace falta prorrogar.', 'info');
         return;
     }
     const ultimoActual = plan.mesesLista[plan.mesesLista.length - 1];
@@ -1010,8 +1085,8 @@ function aplicarProrrogaElegida() {
     plan.prorrogaActiva = true;
     plan.estado = 'prorrogado';
     try { plan._mod = Date.now(); } catch (e) {}
-    // Cuota nueva solo sobre los meses nuevos (punto 2).
-    const repartoExacto = repartirCuotasExactas(plan.saldoPendiente, nuevosMeses.length ? nuevosMeses : plan.mesesLista);
+    // Cuota nueva solo sobre los meses nuevos (punto 2), con el saldo vivo.
+    const repartoExacto = repartirCuotasExactas(saldoVivo, nuevosMeses.length ? nuevosMeses : plan.mesesLista);
     nuevosMeses.forEach(m => {
         plan.cuotasPorMes[m] = repartoExacto[m];
         if (estado.metasBorradas && estado.metasBorradas[m]) return;
@@ -1023,7 +1098,7 @@ function aplicarProrrogaElegida() {
     guardarLocalmente();
     api('/api/planes-amortizacion', 'POST', { planes: estado.planesAmortizacion }).catch(() => {});
     api('/api/metas-lote', 'POST', { metas: estado.metasPorMes }).catch(() => {});
-    mostrarToast(`⏱️ Prórroga de ${nuevos} meses: ${(plan.saldoPendiente / nuevos).toFixed(2)} €/mes de media.`, 'success');
+    mostrarToast(`⏱️ Prórroga de ${nuevos} meses: ${(saldoVivo / nuevos).toFixed(2)} €/mes de media.`, 'success');
     renderMetaAhorro();
 }
 
@@ -1135,12 +1210,14 @@ function renderMetaAhorro() {
         }
 
         // La prórroga solo se ofrece al final del plan: texto + botón Prorrogar.
+        // El importe y la vista previa usan el SALDO VIVO (a la par con el banner).
         const finPlan = esFinDePlan(planActivo, estado.mesSeleccionado);
         if (boxProrrogaFinal) {
             boxProrrogaFinal.style.display = finPlan ? 'block' : 'none';
             if (finPlan) {
                 const elDeuda = document.getElementById('lblProrrogaDeuda');
-                if (elDeuda) elDeuda.textContent = `${Number(planActivo.saldoPendiente).toFixed(2)} €`;
+                if (elDeuda) elDeuda.textContent = `${saldoVivoDePlan(planActivo, estado.mesSeleccionado).toFixed(2)} €`;
+                try { actualizarPreviewProrroga(); } catch (e) {}
             } else {
                 const blq = document.getElementById('bloqueProrrogaJulio');
                 if (blq) blq.style.display = 'none';
@@ -1187,7 +1264,7 @@ function renderMetaAhorro() {
                 if (badgeP) { badgeP.style.display = 'inline-block'; badgeP.textContent = '⏱️ Elige prórroga'; }
                 const balVivoFinRaw = balanceDeMesClave(estado.mesSeleccionado);
                 const aplicadoYaFin = Number((planVivo.pagosAplicados && planVivo.pagosAplicados[estado.mesSeleccionado]) || 0);
-                const saldoVivoFin = Math.max(0, redondear2(planVivo.saldoPendiente - Math.max(0, redondear2(balVivoFinRaw - aplicadoYaFin))));
+                const saldoVivoFin = saldoVivoDePlan(planVivo, estado.mesSeleccionado);
                 document.getElementById('lblAmortSaldoPendiente').textContent = `${saldoVivoFin.toFixed(2)} €`;
                 document.getElementById('lblAmortCuotaMes').textContent = `pendiente`;
                 document.getElementById('lblAmortDesgloseMiembros').innerHTML =
@@ -1207,7 +1284,8 @@ function renderMetaAhorro() {
             if (boxProrrogaFinal) {
                 boxProrrogaFinal.style.display = 'block';
                 const elDeuda2 = document.getElementById('lblProrrogaDeuda');
-                if (elDeuda2) elDeuda2.textContent = `${Number(planVivo.saldoPendiente).toFixed(2)} €`;
+                if (elDeuda2) elDeuda2.textContent = `${saldoVivoDePlan(planVivo, estado.mesSeleccionado).toFixed(2)} €`;
+                try { actualizarPreviewProrroga(); } catch (e) {}
             }
         } else {
             if (bannerAmortizacion) bannerAmortizacion.style.display = 'none';
