@@ -71,7 +71,18 @@ const DATOS_DEMO = {
         { id: 201, telefono: "600111222", tipo: "gasto", concepto: "Cafe manana", categoria: "Ocio y Actividades", cantidad: 3.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-08T09:00:00.000Z" },
         { id: 202, telefono: "600111222", tipo: "gasto", concepto: "Cafe manana", categoria: "Ocio y Actividades", cantidad: 3.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-10T09:00:00.000Z" },
         { id: 203, telefono: "600111222", tipo: "gasto", concepto: "Cafe manana", categoria: "Ocio y Actividades", cantidad: 3.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-12T09:00:00.000Z" },
-        { id: 204, telefono: "600333444", tipo: "gasto", concepto: "Snack kiosco", categoria: "Alimentación", cantidad: 2.8, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-15T18:00:00.000Z" }
+        { id: 204, telefono: "600333444", tipo: "gasto", concepto: "Snack kiosco", categoria: "Alimentación", cantidad: 2.8, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-15T18:00:00.000Z" },
+        { id: 205, telefono: "600111222", tipo: "gasto", concepto: "Cafe finde", categoria: "Ocio y Actividades", cantidad: 3, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-29T09:00:00.000Z" },
+        { id: 206, telefono: "600111222", tipo: "gasto", concepto: "Cafe finde", categoria: "Ocio y Actividades", cantidad: 3, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-30T09:00:00.000Z" },
+        { id: 207, telefono: "600111222", tipo: "gasto", concepto: "Cafe finde", categoria: "Ocio y Actividades", cantidad: 3, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-02T09:00:00.000Z" },
+        { id: 208, telefono: "600111222", tipo: "gasto", concepto: "Cafe oficina", categoria: "Ocio y Actividades", cantidad: 3.2, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-06T09:00:00.000Z" },
+        { id: 209, telefono: "600111222", tipo: "gasto", concepto: "Cafe oficina", categoria: "Ocio y Actividades", cantidad: 3.2, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-07T09:00:00.000Z" },
+        { id: 210, telefono: "600111222", tipo: "gasto", concepto: "Cafe oficina", categoria: "Ocio y Actividades", cantidad: 3.2, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-08T09:00:00.000Z" },
+        { id: 211, telefono: "600333444", tipo: "gasto", concepto: "Bus urbano", categoria: "Transporte", cantidad: 3, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-06T08:30:00.000Z" },
+        { id: 212, telefono: "600333444", tipo: "gasto", concepto: "Snack tarde", categoria: "Alimentación", cantidad: 2.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-07T18:00:00.000Z" },
+        { id: 213, telefono: "600111222", tipo: "gasto", concepto: "Revista semanal", categoria: "Ocio y Actividades", cantidad: 4, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-08T19:00:00.000Z" },
+        { id: 214, telefono: "600333444", tipo: "gasto", concepto: "Tiritas farmacia", categoria: "Salud y Cuidado", cantidad: 5, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-09T12:00:00.000Z" },
+        { id: 215, telefono: "600111222", tipo: "gasto", concepto: "Cafe puntual", categoria: "Ocio y Actividades", cantidad: 3.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-14T09:00:00.000Z" }
     ]
 };
 
@@ -1773,82 +1784,191 @@ function tendenciasEsquematicasHTML(cambios) {
     return html;
 }
 
-// Gastos hormiga (Bloque 3): microgastos, frecuencia y fantasmas. Solo visual nuevo,
-// no toca la lógica existente. Tono neutro, sin sermones.
+// Gastos hormiga semanal v1.9.16 (Bloque 3): hábitos + goteo por semana lun-dom.
+// La semana cuenta en el mes donde cae el domingo. 1-2 sueltos no cuentan:
+// hábito = mismo concepto 3+ veces en la misma semana; goteo = 3+ micros
+// distintos que sumen 10+ € en la misma semana. Sin fijos. Tono neutro.
 function normalizarConceptoHormiga(s) {
     try {
         return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim().slice(0, 30);
     } catch (e) { return String(s || '').toLowerCase().trim().slice(0, 30); }
 }
 
+const HORMIGA_CATS = ['Alimentación', 'Ocio y Actividades', 'Otros', 'Salud y Cuidado', 'Transporte', 'Moda y Estética'];
+const HORMIGA_UMBRAL = 15;
+const HORMIGA_GOTEO_MIN_MOVS = 3;
+const HORMIGA_GOTEO_MIN_TOTAL = 10;
+const HORMIGA_MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
+function hormigaFechaYMD(fechaISO) {
+    try {
+        const s = String(fechaISO || '').substring(0, 10);
+        const p = s.split('-').map(Number);
+        if (p.length < 3 || !p[0] || !p[1] || !p[2]) return null;
+        return { a: p[0], m: p[1], d: p[2] };
+    } catch (e) { return null; }
+}
+
+function hormigaLunesDeSemana(fechaISO) {
+    const ymd = hormigaFechaYMD(fechaISO);
+    if (!ymd) return null;
+    try {
+        const dt = new Date(ymd.a, ymd.m - 1, ymd.d, 12, 0, 0);
+        if (isNaN(dt)) return null;
+        const dow = (dt.getDay() + 6) % 7; // lun=0 ... dom=6
+        dt.setDate(dt.getDate() - dow);
+        dt.setHours(12, 0, 0, 0);
+        return dt;
+    } catch (e) { return null; }
+}
+
+function hormigaClaveFecha(dt) {
+    try {
+        return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+    } catch (e) { return ''; }
+}
+
+function hormigaEtiquetaSemana(lunes, domingo) {
+    try {
+        const dl = lunes.getDate(), dd = domingo.getDate();
+        const ml = HORMIGA_MESES_CORTOS[lunes.getMonth()], md = HORMIGA_MESES_CORTOS[domingo.getMonth()];
+        if (lunes.getMonth() === domingo.getMonth()) return `${dl}–${dd} ${md}`;
+        return `${dl} ${ml}–${dd} ${md}`;
+    } catch (e) { return ''; }
+}
+
+function hormigaDiaCorto(fechaISO) {
+    try {
+        const ymd = hormigaFechaYMD(fechaISO);
+        if (!ymd) return '';
+        return `${ymd.d} ${HORMIGA_MESES_CORTOS[ymd.m - 1]}`;
+    } catch (e) { return ''; }
+}
+
+function hormigaMesDeSemana(domingo) {
+    try {
+        return domingo.getFullYear() + '-' + String(domingo.getMonth() + 1).padStart(2, '0');
+    } catch (e) { return ''; }
+}
+
 function detectarGastosHormiga(mesClave) {
     try {
-        const partes = String(mesClave || '').split('-').map(Number);
-        const a = partes[0], m = partes[1];
-        if (!a || !m) return { total: 0, movs: [], porCategoria: {} };
-        const ops = obtenerOperacionesMes(a, m).filter(o => o && o.tipo === 'gasto');
-        const UMBRAL = 15;
-        const CATS_PROP = ['Alimentación', 'Ocio y Actividades', 'Otros', 'Salud y Cuidado', 'Transporte', 'Moda y Estética'];
-        const ids = new Set();
-        ops.forEach(o => {
-            const cant = Number(o.cantidad) || 0;
-            if (cant <= 0) return;
-            const cat = o.categoria || 'Otros';
-            const esFijo = !!o.esFijo;
-            if (!esFijo && cant <= UMBRAL && CATS_PROP.includes(cat)) ids.add(o.id);
-            else if (esFijo && cant <= 20 && CATS_PROP.includes(cat)) ids.add(o.id);
-        });
-        const porConcepto = {};
-        ops.forEach(o => {
-            const cant = Number(o.cantidad) || 0;
-            if (!(cant > 0 && cant <= 20) || o.esFijo) return;
-            const k = normalizarConceptoHormiga(o.concepto) + '|' + (o.categoria || '');
-            if (!k.trim()) return;
-            if (!porConcepto[k]) porConcepto[k] = [];
-            porConcepto[k].push(o);
-        });
-        Object.values(porConcepto).forEach(lista => {
-            if (lista.length < 3) return;
-            lista.sort((x, y) => String(x.fecha).localeCompare(String(y.fecha)));
-            for (let i = 0; i < lista.length; i++) {
-                for (let j = i + 2; j < lista.length; j++) {
-                    try {
-                        const d1 = new Date(lista[i].fecha);
-                        const d2 = new Date(lista[j].fecha);
-                        const diff = (d2 - d1) / (1000 * 60 * 60 * 24);
-                        if (diff <= 7) {
-                            for (let k = i; k <= j; k++) ids.add(lista[k].id);
-                            break;
-                        }
-                        if (diff > 7) break;
-                    } catch (e) {}
+        if (!/^\d{4}-\d{2}$/.test(String(mesClave || ''))) return { total: 0, movs: [], porCategoria: {}, semanas: [] };
+        const porSemana = {}; // claveLunes -> { lunes, domingo, ops: [] }
+        (estado.transacciones || []).forEach(o => {
+            try {
+                if (!o || o.tipo !== 'gasto' || o.esFijo) return;
+                const cant = Number(o.cantidad) || 0;
+                if (!(cant > 0 && cant <= HORMIGA_UMBRAL)) return;
+                if (!HORMIGA_CATS.includes(o.categoria || 'Otros')) return;
+                const lunes = hormigaLunesDeSemana(o.fecha);
+                if (!lunes) return;
+                const k = hormigaClaveFecha(lunes);
+                if (!porSemana[k]) {
+                    const dom = new Date(lunes.getTime());
+                    dom.setDate(dom.getDate() + 6);
+                    porSemana[k] = { lunes: new Date(lunes.getTime()), domingo: dom, ops: [] };
                 }
-            }
+                porSemana[k].ops.push(o);
+            } catch (e) {}
         });
-        const movs = ops.filter(o => ids.has(o.id));
-        let total = 0;
-        const porCategoria = {};
-        movs.forEach(o => {
-            const c = Number(o.cantidad) || 0;
-            total += c;
-            porCategoria[o.categoria || 'Otros'] = (porCategoria[o.categoria || 'Otros'] || 0) + c;
+        const semanas = [];
+        let totalMes = 0;
+        const movsMes = [];
+        const porCatMes = {};
+        Object.values(porSemana).forEach(sem => {
+            try {
+                const porConcepto = {};
+                sem.ops.forEach(o => {
+                    const k = normalizarConceptoHormiga(o.concepto) + '|' + (o.categoria || '');
+                    if (!k.trim() || k === '|') return;
+                    if (!porConcepto[k]) porConcepto[k] = [];
+                    porConcepto[k].push(o);
+                });
+                const habitos = [];
+                const idsHabito = new Set();
+                Object.values(porConcepto).forEach(lista => {
+                    if (lista.length < 3) return;
+                    let tot = 0;
+                    lista.forEach(o => { tot += Number(o.cantidad) || 0; idsHabito.add(o.id); });
+                    tot = Math.round(tot * 100) / 100;
+                    const primera = lista.slice().sort((x, y) => String(x.fecha).localeCompare(String(y.fecha)))[0];
+                    const dias = lista.slice().sort((x, y) => String(x.fecha).localeCompare(String(y.fecha))).map(o => hormigaDiaCorto(o.fecha));
+                    habitos.push({ concepto: (primera && primera.concepto) || 'Varios', categoria: (primera && primera.categoria) || 'Otros', veces: lista.length, total: tot, dias, movs: lista.slice() });
+                });
+                habitos.sort((a, b) => b.total - a.total);
+                const resto = sem.ops.filter(o => !idsHabito.has(o.id));
+                let goteoMovs = [];
+                let goteoTotal = 0;
+                if (resto.length >= HORMIGA_GOTEO_MIN_MOVS) {
+                    let s = 0;
+                    resto.forEach(o => { s += Number(o.cantidad) || 0; });
+                    s = Math.round(s * 100) / 100;
+                    if (s >= HORMIGA_GOTEO_MIN_TOTAL) { goteoMovs = resto.slice(); goteoTotal = s; }
+                }
+                const movsSem = [];
+                habitos.forEach(h => h.movs.forEach(o => movsSem.push(o)));
+                goteoMovs.forEach(o => movsSem.push(o));
+                if (!movsSem.length) return;
+                let totSem = 0;
+                const porCat = {};
+                movsSem.forEach(o => {
+                    const c = Number(o.cantidad) || 0;
+                    totSem += c;
+                    porCat[o.categoria || 'Otros'] = (porCat[o.categoria || 'Otros'] || 0) + c;
+                });
+                totSem = Math.round(totSem * 100) / 100;
+                if (hormigaMesDeSemana(sem.domingo) !== mesClave) return;
+                const etiqueta = hormigaEtiquetaSemana(sem.lunes, sem.domingo);
+                goteoMovs.sort((x, y) => String(x.fecha).localeCompare(String(y.fecha)));
+                semanas.push({ etiqueta, lunesISO: hormigaClaveFecha(sem.lunes), total: totSem, movs: movsSem, habitos, goteoMovs, goteoTotal, porCategoria: porCat });
+                totalMes += totSem;
+                movsSem.forEach(o => movsMes.push(o));
+                Object.entries(porCat).forEach(([c, v]) => { porCatMes[c] = (porCatMes[c] || 0) + v; });
+            } catch (e) {}
         });
-        total = Math.round(total * 100) / 100;
-        return { total, movs, porCategoria };
-    } catch (e) { return { total: 0, movs: [], porCategoria: {} }; }
+        semanas.sort((a, b) => String(b.lunesISO).localeCompare(String(a.lunesISO)));
+        totalMes = Math.round(totalMes * 100) / 100;
+        return { total: totalMes, movs: movsMes, porCategoria: porCatMes, semanas };
+    } catch (e) { return { total: 0, movs: [], porCategoria: {}, semanas: [] }; }
 }
 
 function hormigaHTML(res) {
-    if (!res || !(res.total > 0)) return `<div class="intel-empty">Sin fugas hormiga</div>`;
-    const n = (res.movs || []).length;
-    let html = `<div class="intel-kpi-row"><span class="intel-kpi-cat">🐜 Fuga hormiga estimada</span><span class="intel-kpi-pills"><span class="pill-alerta">${res.total.toFixed(2)} € en ${n} movs</span></span></div>`;
-    html += `<details class="hormiga-details"><summary>Ver detalle</summary>`;
-    Object.entries(res.porCategoria || {}).sort((a, b) => b[1] - a[1]).forEach(([cat, imp]) => {
-        const icono = (CATEGORIAS_CONFIG[cat] && CATEGORIAS_CONFIG[cat].icon) || '📁';
-        html += `<div class="trend-row"><span class="trend-cat">${icono} ${cat}</span><strong class="trend-importe">${Number(imp).toFixed(2)} €</strong></div>`;
-    });
-    html += `</details>`;
-    return html;
+    try {
+        const sems = (res && res.semanas) || [];
+        const conFuga = sems.filter(s => s && s.total > 0);
+        if (!conFuga.length) return `<div class="intel-empty">Sin fugas hormiga</div><div class="hormiga-hint">1 café suelto no cuenta: hacen falta 3+ en la misma semana (lun–dom).</div>`;
+        let html = '';
+        conFuga.forEach(s => {
+            const n = (s.movs || []).length;
+            const totHab = (s.habitos || []).reduce((a, h) => a + (Number(h.total) || 0), 0);
+            const totGot = Number(s.goteoTotal) || 0;
+            let pill = `${s.total.toFixed(2)} € en ${n} movs`;
+            if (totHab > 0 && totGot > 0) pill += ` (Hábito ${totHab.toFixed(2)} € + Goteo ${totGot.toFixed(2)} €)`;
+            else if (totHab > 0 && !totGot) pill += ` · Hábito`;
+            else if (totGot > 0 && !totHab) pill += ` · Goteo`;
+            html += `<div class="hormiga-semana"><div class="intel-kpi-row"><span class="intel-kpi-cat">🐜 Semana ${s.etiqueta}</span><span class="intel-kpi-pills"><span class="pill-alerta">${pill}</span></span></div>`;
+            html += `<details class="hormiga-details"><summary>Ver detalle ${s.etiqueta}</summary>`;
+            (s.habitos || []).forEach(h => {
+                const icono = (typeof CATEGORIAS_CONFIG !== 'undefined' && CATEGORIAS_CONFIG[h.categoria] && CATEGORIAS_CONFIG[h.categoria].icon) || '🔁';
+                const diasTxt = (h.dias || []).join(', ');
+                html += `<div class="hormiga-sub">🔁 Hábito · ${icono} ${h.categoria}</div>`;
+                html += `<div class="trend-row"><span class="trend-cat">${h.concepto} · ${h.veces}x (${diasTxt})</span><strong class="trend-importe">${Number(h.total).toFixed(2)} €</strong></div>`;
+            });
+            if ((s.goteoMovs || []).length) {
+                html += `<div class="hormiga-sub">💧 Goteo · ${s.goteoMovs.length} micros distintos = ${Number(s.goteoTotal).toFixed(2)} €</div>`;
+                s.goteoMovs.forEach(o => {
+                    const icono = (typeof CATEGORIAS_CONFIG !== 'undefined' && CATEGORIAS_CONFIG[o.categoria] && CATEGORIAS_CONFIG[o.categoria].icon) || '📁';
+                    html += `<div class="trend-row"><span class="trend-cat">${icono} ${o.concepto} (${hormigaDiaCorto(o.fecha)})</span><strong class="trend-importe">${Number(o.cantidad).toFixed(2)} €</strong></div>`;
+                });
+            }
+            html += `</details></div>`;
+        });
+        return html;
+    } catch (e) {
+        if (!res || !(res.total > 0)) return `<div class="intel-empty">Sin fugas hormiga</div>`;
+        return `<div class="intel-kpi-row"><span class="intel-kpi-cat">🐜 Fuga hormiga estimada</span><span class="intel-kpi-pills"><span class="pill-alerta">${Number(res.total).toFixed(2)} €</span></span></div>`;
+    }
 }
 
 function renderSugerenciaAhorro(deficit) {

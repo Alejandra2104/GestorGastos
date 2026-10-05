@@ -372,7 +372,18 @@ app.post('/api/simular', (req, res) => {
             { id: 201, telefono: "600111222", tipo: "gasto", concepto: "Cafe manana", categoria: "Ocio y Actividades", cantidad: 3.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-08T09:00:00.000Z" },
             { id: 202, telefono: "600111222", tipo: "gasto", concepto: "Cafe manana", categoria: "Ocio y Actividades", cantidad: 3.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-10T09:00:00.000Z" },
             { id: 203, telefono: "600111222", tipo: "gasto", concepto: "Cafe manana", categoria: "Ocio y Actividades", cantidad: 3.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-12T09:00:00.000Z" },
-            { id: 204, telefono: "600333444", tipo: "gasto", concepto: "Snack kiosco", categoria: "Alimentación", cantidad: 2.8, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-15T18:00:00.000Z" }
+            { id: 204, telefono: "600333444", tipo: "gasto", concepto: "Snack kiosco", categoria: "Alimentación", cantidad: 2.8, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-15T18:00:00.000Z" },
+            { id: 205, telefono: "600111222", tipo: "gasto", concepto: "Cafe finde", categoria: "Ocio y Actividades", cantidad: 3, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-29T09:00:00.000Z" },
+            { id: 206, telefono: "600111222", tipo: "gasto", concepto: "Cafe finde", categoria: "Ocio y Actividades", cantidad: 3, esCompartido: false, formaPago: "efectivo", fecha: "2026-09-30T09:00:00.000Z" },
+            { id: 207, telefono: "600111222", tipo: "gasto", concepto: "Cafe finde", categoria: "Ocio y Actividades", cantidad: 3, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-02T09:00:00.000Z" },
+            { id: 208, telefono: "600111222", tipo: "gasto", concepto: "Cafe oficina", categoria: "Ocio y Actividades", cantidad: 3.2, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-06T09:00:00.000Z" },
+            { id: 209, telefono: "600111222", tipo: "gasto", concepto: "Cafe oficina", categoria: "Ocio y Actividades", cantidad: 3.2, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-07T09:00:00.000Z" },
+            { id: 210, telefono: "600111222", tipo: "gasto", concepto: "Cafe oficina", categoria: "Ocio y Actividades", cantidad: 3.2, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-08T09:00:00.000Z" },
+            { id: 211, telefono: "600333444", tipo: "gasto", concepto: "Bus urbano", categoria: "Transporte", cantidad: 3, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-06T08:30:00.000Z" },
+            { id: 212, telefono: "600333444", tipo: "gasto", concepto: "Snack tarde", categoria: "Alimentación", cantidad: 2.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-07T18:00:00.000Z" },
+            { id: 213, telefono: "600111222", tipo: "gasto", concepto: "Revista semanal", categoria: "Ocio y Actividades", cantidad: 4, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-08T19:00:00.000Z" },
+            { id: 214, telefono: "600333444", tipo: "gasto", concepto: "Tiritas farmacia", categoria: "Salud y Cuidado", cantidad: 5, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-09T12:00:00.000Z" },
+            { id: 215, telefono: "600111222", tipo: "gasto", concepto: "Cafe puntual", categoria: "Ocio y Actividades", cantidad: 3.5, esCompartido: false, formaPago: "efectivo", fecha: "2026-10-14T09:00:00.000Z" }
         ]
     };
 

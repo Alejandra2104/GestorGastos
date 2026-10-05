@@ -6,7 +6,7 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.9.15
+**Versión documentada:** v1.9.16
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
 > Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.9.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
@@ -212,6 +212,11 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Pedidos:** rediseñar "Meta de Ahorro" en dos bloques sin texto denso; el desglose por miembro (50/50) solo si se marca "Meta compartida"; sacar la sugerencia del cuadro naranja a "Proyección próximo mes"; textos con palabras ("ahorras X €", "fue único · evita repetir"); quitar el triángulo rojo; añadir "gastos hormiga" en el Bloque 3 con píldora y detalle desplegable.
 * **Cambios (solo visual, la lógica de cálculo no cambia):** nuevo `bloqueInteligencia` con 3 tarjetas (`cardSugerencia` / `cardProyeccion` / `cardTendencias`) en `public/index.html` + estilos KPI en `public/style.css`; `renderSugerenciaAhorro()` pinta la proyección en su tarjeta (usa saldo vivo en prórroga), `renderSugerenciaIndependiente()` pinta la sugerencia en su tarjeta (vacío "No hay meta establecida" sin meta, tendencias siempre visibles); desgloses por miembro gateados por `esMetaCompartidaActiva()`; nueva detección `detectarGastosHormiga()` (micros ≤15 € en propensas, mismo concepto ≥3 en 7 días, fijos pequeños ≤20 €) con `🐜 Fuga hormiga estimada` + `<details>` en el Bloque 3; demo con cafés/snack + suscripción mini 9,99 € para verlo.
 * **Versión:** app → v1.9.15, SW → v1.8.27. Verificado con `node --check` y push a `main`.
+
+### S29 — Hormiga semanal hábitos+goteo v1.9.16 (05/10/2026, pedido por Alejandra)
+* **Pedidos:** que 1 café suelto no cuente como hormiga (son hábitos); solo por semana de calendario lun–dom, con la semana contando en el mes donde cae el domingo; hábitos y goteo desplegables para ver de dónde vienen; demo lista para clase.
+* **Cambios (genéricos demo y real):** reescrita `detectarGastosHormiga(mesClave)` en `public/app.js`: agrupa micros ≤15 € sin fijos en propensas por semana lun–dom; `🔁 Hábito` = mismo concepto normalizado + categoría 3+ veces en la semana; `💧 Goteo` = resto de micros con 3+ movs y 10+ € en la semana; la semana filtra por mes del domingo y se ordena reciente primero; devuelve `{total, movs, porCategoria, semanas}` (compat con lo anterior); nuevo `hormigaHTML()` con una píldora por semana `🐜 Semana 7–13 sep: X € en N movs (Hábito X € + Goteo Y €)` + `<details>Ver detalle` con líneas de hábito (`concepto · Nx (días) = total`) y de goteo (cada micro con día) + estilos `.hormiga-semana/.hormiga-sub/.hormiga-hint` en `public/style.css`; demo ampliada en `public/app.js` + `server.js` (mismo contenido): septiembre mantiene 3x café 8/10/12 (hábito 10,50 € semana 8–14 sep) + snack suelto 15 sep que no sale; octubre trae semana a caballo 29 sep–4 oct con 3x café finde (9 €, cuenta en octubre) y semana 5–11 oct con 3x café oficina (9,60 €) + goteo bus/snack/revista/tiritas (14,50 €) = 24,10 € en 7 movs, más café puntual 14 oct que no sale.
+* **Versión:** app → v1.9.16, SW → v1.8.28. Verificado con `node --check` + prueba de lógica semanal y push a `main`.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
