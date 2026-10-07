@@ -1329,12 +1329,14 @@ function renderMetaAhorro() {
                 document.getElementById('lblAmortDesgloseMiembros').innerHTML =
                     `💡 El plan acabó y aún debes <strong>${saldoVivoFin.toFixed(2)} €</strong> con lo de este mes. Elige abajo en cuántos meses lo recuperas.`;
                 try {
-                    const ap = aportadoDePlan(planVivo);
-                    const tot = Number(planVivo.deficitTotalAcumulado !== undefined ? planVivo.deficitTotalAcumulado : planVivo.deficitTotal) || 0;
+                    // v1.9.18: recordatorio en neto. El 134.27 ya tiene los 55.01
+                    // descontados, no se vuelven a sumar: N = solo lo de este
+                    // mes en vivo, denominador = saldo con el que cerró el plan
+                    // (ej: 20 de 134.27 => quedan 114.27; 479 de 134.27 => 0).
+                    const saldoCierre = redondear2(Number(planVivo.saldoPendiente) || 0);
                     const balVivoFin = Math.max(0, redondear2(balVivoFinRaw - aplicadoYaFin));
-                    const apVivo = Math.max(0, redondear2(ap + balVivoFin));
                     const elAp2 = document.getElementById('lblAmortAportado');
-                    if (elAp2) elAp2.innerHTML = `Llevas aportado <strong>${apVivo.toFixed(2)} €</strong> de <strong>${tot.toFixed(2)} €</strong>`;
+                    if (elAp2) elAp2.innerHTML = `Llevas aportado <strong>${balVivoFin.toFixed(2)} €</strong> de <strong>${saldoCierre.toFixed(2)} €</strong>`;
                     const elRe2 = document.getElementById('lblAmortRetraso');
                     if (elRe2) elRe2.innerHTML = `⏱️ Plan terminado con deuda. No se exige todo ya: elige prórroga abajo.`;
                 } catch (e) {}

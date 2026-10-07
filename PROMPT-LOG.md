@@ -6,7 +6,7 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.9.17
+**Versión documentada:** v1.9.18
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
 > Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.9.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
@@ -222,6 +222,11 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Pedidos:** a mitad de plan que siga como ahora (el negativo no se exige ya, se acumula para el final); solo al final en `Plan terminado, quedan X €` que sume en vivo lo de este mes (ej: 50 con -20 => 70; 104.98 con -29.29 => 134.27) y que el bloque naranja al darle a `Prorrogar` también vaya en vivo completo.
 * **Cambios (genéricos demo y real):** nueva `saldoVivoFinalDePlan()` en `public/app.js` (`saldoPendiente - (balanceEsteMes - yaAplicado)`, sin capar el negativo, con tope 0); `saldoVivoDePlan()` se mantiene capado para mitad de plan; banner `lblAmortSaldoPendiente` usa final si `esFinDePlan || prorrogaActiva`, si no capado; `lblProrrogaDeuda` (ambas ramas final/más-allá), `saldoVivoFin`, `extenderPlanConSaldoVivo()`, `actualizarCalculoProrrateo()`, `actualizarPreviewProrroga()`, importe/desglose/sugerencia del naranja en `prorrogaForzada` y `vivoC` usan el final; el guardado sigue cuadrando al cerrar el mes en `conciliarPlanesAlCambiarMes` (sin duplicar). Aportado/retraso no cambian.
 * **Versión:** app → v1.9.17, SW → v1.8.29. Verificado con `node --check` + simulación (50/-20=>70 final y 50 mitad; 104.98/-29.29=>134.27; 85/80=>5 igual) y push a `main`.
+
+### S31 — Recordatorio neto sin doble conteo v1.9.18 (07/10/2026, pedido por Alejandra)
+* **Pedidos:** en octubre-recordatorio (plan acabado y no prorrogado el mes anterior) no volver a sumar los 55.01: poner `llevas N de este mes de 134.27` (neto con el que cerró septiembre) y mantener `saldo/quedan = 134.27 - lo de este mes` en vivo (20=>114.27; 479=>0).
+* **Cambios:** rama `hayFinalPendiente` en `public/app.js`: `lblAmortAportado` pasa de `ap+vivo de total (534.42 de 189.28)` a `vivoEsteMes de saldoCierre (N de 134.27)`; `lblAmortSaldoPendiente` y `lblProrrogaDeuda` ya eran `saldoVivoFinalDePlan` y se mantienen; resto del bloque igual. Septiembre-final no cambia.
+* **Versión:** app → v1.9.18, SW → v1.8.30. Verificado con `node --check` + simulación (20=>114.27; 479.41=>0; -10=>144.27) y push a `main`.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
