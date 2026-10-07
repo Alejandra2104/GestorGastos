@@ -929,6 +929,7 @@ function aportadoDePlan(plan) {
 // Saldo en vivo: lo guardado menos lo de este mes (sin contar dos veces lo ya
 // aplicado). Es la misma cifra del banner, para que prórroga y banner vayan a
 // la par en demo y en real. No toca el guardado: solo informa.
+// A mitad de plan solo resta (el negativo se acumula para la prórroga final).
 function saldoVivoDePlan(plan, mesClave) {
     if (!plan) return 0;
     try {
@@ -936,6 +937,23 @@ function saldoVivoDePlan(plan, mesClave) {
         const balRaw = balanceDeMesClave(mesClave);
         const aplicadoYa = Number((plan.pagosAplicados && plan.pagosAplicados[mesClave]) || 0);
         const balVivo = Math.max(0, redondear2(balRaw - aplicadoYa));
+        return Math.max(0, redondear2(Number(plan.saldoPendiente || 0) - balVivo));
+    } catch (e) { return Number(plan.saldoPendiente || 0); }
+}
+
+// v1.9.17: saldo final en vivo completo. Solo para el final del plan
+// (Plan terminado + bloque naranja de prórroga). Aquí el negativo SÍ suma:
+// saldoGuardado - (balanceEsteMes - yaAplicado). Ej: 104.98 con -29.29
+// en el mes => 134.27 a prorrogar. No toca el guardado: el guardado cuadra
+// al cerrar el mes en conciliarPlanesAlCambiarMes. En prórroga activa
+// también se usa para que el banner no baje tras aplicar.
+function saldoVivoFinalDePlan(plan, mesClave) {
+    if (!plan) return 0;
+    try {
+        migrarPlanViejo(plan);
+        const balRaw = balanceDeMesClave(mesClave);
+        const aplicadoYa = Number((plan.pagosAplicados && plan.pagosAplicados[mesClave]) || 0);
+        const balVivo = redondear2(balRaw - aplicadoYa);
         return Math.max(0, redondear2(Number(plan.saldoPendiente || 0) - balVivo));
     } catch (e) { return Number(plan.saldoPendiente || 0); }
 }
@@ -1025,8 +1043,9 @@ function mostrarBloqueProrroga() {
     } catch (e) {}
 }
 
-// Extiende el plan único con el SALDO VIVO (lo que debes de verdad con lo de
-// este mes). Vale para demo y real. No duplica: solo reparte lo pendiente.
+// Extiende el plan único con el SALDO VIVO FINAL (lo que debes de verdad con lo
+// de este mes, en vivo completo: el negativo suma). Vale para demo y real.
+// No duplica: solo reparte lo pendiente. El guardado cuadra al cerrar el mes.
 function extenderPlanConSaldoVivo(nuevos) {
     const plan = obtenerUnicoPlanVivo();
     if (!plan) {
@@ -1038,7 +1057,7 @@ function extenderPlanConSaldoVivo(nuevos) {
         mostrarToast('Elige en cuántos meses: 2, 4, 6, 8 o 12', 'danger');
         return false;
     }
-    const saldoVivo = saldoVivoDePlan(plan, estado.mesSeleccionado);
+    const saldoVivo = saldoVivoFinalDePlan(plan, estado.mesSeleccionado);
     if (!(saldoVivo > 0.01)) {
         mostrarToast('Con lo de este mes ya está saldado: no hace falta prorrogar.', 'info');
         return false;
@@ -1095,7 +1114,7 @@ function actualizarPreviewProrroga() {
             lblDes.style.display = '';
             const plan = planVivoParaProrroga();
             if (plan) {
-                const vivo = saldoVivoDePlan(plan, estado.mesSeleccionado);
+                const vivo = saldoVivoFinalDePlan(plan, estado.mesSeleccionado);
                 if (vivo > 0.005) {
                     const reparto = obtenerRepartoMes(estado.mesSeleccionado);
                     const members = Object.entries(estado.usuarios);
@@ -1113,10 +1132,11 @@ function actualizarPreviewProrroga() {
     } catch (e) {}
 }
 
-// Cálculo correcto: cuota = lo que quede EN VIVO / meses nuevos (no entre el total
-// guardado). Así la prórroga reparte lo que debes de verdad con lo de este mes
-// (ej: 85 guardados - 80 de este mes = 5 a prorrogar). El guardado se concilia
-// al cerrar el mes y cuadra con las nuevas cuotas. Vale para demo y real.
+// Cálculo correcto: cuota = lo que quede EN VIVO FINAL / meses nuevos (no entre
+// el total guardado). Así la prórroga reparte lo que debes de verdad con lo de
+// este mes en vivo completo (ej: 85 guardados - 80 de este mes = 5 a prorrogar;
+// 104.98 con -29.29 = 134.27 a prorrogar). El guardado se concilia al cerrar
+// el mes y cuadra con las nuevas cuotas. Vale para demo y real.
 function aplicarProrrogaElegida() {
     let nuevos = NaN;
     try {
@@ -1183,9 +1203,15 @@ function renderMetaAhorro() {
                 badgeProrroga.style.display = planActivo.prorrogaActiva ? 'inline-block' : 'none';
             }
 
-            // Saldo en directo: baja con lo que ingresas y sube con lo que gastas de más.
-            // Ej: debes 85 € y metes 75 € → marca 10 € (faltan 10 €).
-            const saldoVivo = Math.max(0, redondear2(planActivo.saldoPendiente - balVivoPlan));
+            // Saldo en directo: a mitad de plan solo baja con lo que ingresas
+            // (el negativo se acumula para la prórroga final, no se exige ya).
+            // Al final del plan o en prórroga activa, en vivo completo: el
+            // negativo SÍ suma (ej: 104.98 con -29.29 => 134.27 a prorrogar).
+            // Ej mitad: debes 85 € y metes 75 € → marca 10 € (faltan 10 €).
+            const esFinalAqui = esFinDePlan(planActivo, estado.mesSeleccionado) || !!planActivo.prorrogaActiva;
+            const saldoVivo = esFinalAqui
+                ? saldoVivoFinalDePlan(planActivo, estado.mesSeleccionado)
+                : Math.max(0, redondear2(planActivo.saldoPendiente - balVivoPlan));
             document.getElementById('lblAmortSaldoPendiente').textContent = `${saldoVivo.toFixed(2)} €`;
             document.getElementById('lblAmortCuotaMes').textContent = `+${Number(cuotaEsteMes).toFixed(2)} €/mes`;
 
@@ -1243,13 +1269,14 @@ function renderMetaAhorro() {
 
         // La prórroga solo se ofrece al final del plan: texto + botón Prorrogar.
         // Al pulsar, se activa el bloque naranja del déficit (misma lógica que
-        // julio / extra: vertical, genérico demo y real). El importe usa SALDO VIVO.
+        // julio / extra: vertical, genérico demo y real). El importe usa SALDO
+        // VIVO FINAL (en vivo completo: el negativo de este mes sí suma).
         const finPlan = esFinDePlan(planActivo, estado.mesSeleccionado);
         if (boxProrrogaFinal) {
             boxProrrogaFinal.style.display = finPlan ? 'block' : 'none';
             if (finPlan) {
                 const elDeuda = document.getElementById('lblProrrogaDeuda');
-                if (elDeuda) elDeuda.textContent = `${saldoVivoDePlan(planActivo, estado.mesSeleccionado).toFixed(2)} €`;
+                if (elDeuda) elDeuda.textContent = `${saldoVivoFinalDePlan(planActivo, estado.mesSeleccionado).toFixed(2)} €`;
                 try { actualizarPreviewProrroga(); } catch (e) {}
                 const bp = document.getElementById('btnProrrogar');
                 if (bp) bp.style.display = esProrrogaSolicitada() ? 'none' : '';
@@ -1296,7 +1323,7 @@ function renderMetaAhorro() {
                 if (badgeP) { badgeP.style.display = 'inline-block'; badgeP.textContent = '⏱️ Elige prórroga'; }
                 const balVivoFinRaw = balanceDeMesClave(estado.mesSeleccionado);
                 const aplicadoYaFin = Number((planVivo.pagosAplicados && planVivo.pagosAplicados[estado.mesSeleccionado]) || 0);
-                const saldoVivoFin = saldoVivoDePlan(planVivo, estado.mesSeleccionado);
+                const saldoVivoFin = saldoVivoFinalDePlan(planVivo, estado.mesSeleccionado);
                 document.getElementById('lblAmortSaldoPendiente').textContent = `${saldoVivoFin.toFixed(2)} €`;
                 document.getElementById('lblAmortCuotaMes').textContent = `pendiente`;
                 document.getElementById('lblAmortDesgloseMiembros').innerHTML =
@@ -1316,7 +1343,7 @@ function renderMetaAhorro() {
             if (boxProrrogaFinal) {
                 boxProrrogaFinal.style.display = 'block';
                 const elDeuda2 = document.getElementById('lblProrrogaDeuda');
-                if (elDeuda2) elDeuda2.textContent = `${saldoVivoDePlan(planVivo, estado.mesSeleccionado).toFixed(2)} €`;
+                if (elDeuda2) elDeuda2.textContent = `${saldoVivoFinalDePlan(planVivo, estado.mesSeleccionado).toFixed(2)} €`;
                 try { actualizarPreviewProrroga(); } catch (e) {}
                 const bp2 = document.getElementById('btnProrrogar');
                 if (bp2) bp2.style.display = esProrrogaSolicitada() ? 'none' : '';
@@ -1399,12 +1426,13 @@ function renderMetaAhorro() {
                 mostrarToast('🎉 ¡Plan saldado con lo aportado! Los meses siguientes quedan libres.', 'success');
             }
         }
-        // Prórroga pedida con el mes cubierto pero con saldo vivo (ej: debes 85,
-        // pagas 80 este mes, quedan 5): se muestra también el bloque naranja para
-        // elegir meses, en demo y en real. El cuadro de abajo sí se actualiza.
+        // Prórroga pedida con el mes cubierto pero con saldo vivo final (ej: debes
+        // 85, pagas 80 este mes, quedan 5; o 104.98 con -29.29 => 134.27):
+        // se muestra también el bloque naranja para elegir meses, en demo y
+        // en real. El cuadro de abajo sí se actualiza en vivo completo.
         try {
             if (planActivo && esProrrogaSolicitada()) {
-                const vivoC = saldoVivoDePlan(planActivo, estado.mesSeleccionado);
+                const vivoC = saldoVivoFinalDePlan(planActivo, estado.mesSeleccionado);
                 if (vivoC > 0.005) {
                     bannerDeficit.style.display = 'block';
                     const prC = document.getElementById('prorrateControls');
@@ -1439,16 +1467,17 @@ function renderMetaAhorro() {
         const deficit = meta - balanceActual;
         document.getElementById('lblDeficitImporte').textContent = `${deficit.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €`;
         actualizarDesgloseDeficitUI();
-        // Prórroga pedida: el bloque naranja muestra el SALDO VIVO (lo que debes
-        // de verdad) en importe + desglose + sugerencia, para que cuadre con la
-        // preview (ej: 85 € → 42.50 cada uno en 2 meses). Todo en vivo: al darle
-        // a Prorrogar ya es último mes y tiene sentido que se mueva con cada
+        // Prórroga pedida: el bloque naranja muestra el SALDO VIVO FINAL (lo que
+        // debes de verdad, en vivo completo: el negativo sí suma) en importe +
+        // desglose + sugerencia, para que cuadre con la preview (ej: 85 € →
+        // 42.50 cada uno en 2 meses; 104.98 con -29.29 => 134.27). Todo en vivo:
+        // al darle a Prorrogar ya es último mes y se mueve con cada
         // ingreso/gasto. Genérico demo y real.
         if (prorrogaForzada) {
             try {
                 const planPF = planVivoParaProrroga();
                 if (planPF) {
-                    const vivoPF = saldoVivoDePlan(planPF, estado.mesSeleccionado);
+                    const vivoPF = saldoVivoFinalDePlan(planPF, estado.mesSeleccionado);
                     if (vivoPF > 0.005) {
                         document.getElementById('lblDeficitImporte').textContent = `${vivoPF.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €`;
                         const elDes = document.getElementById('lblDeficitDesglose');
@@ -1486,12 +1515,12 @@ function renderMetaAhorro() {
             if (prControls) prControls.style.display = 'none';
             if (prDetalle) prDetalle.innerHTML = `📌 Este desfase de <strong>${deficit.toFixed(2)} €</strong> se acumula al plan actual y se ajustará en la prórroga al terminar. Este mes solo debes la cuota.`;
         }
-        // Sugerencia en vivo cuando hay prórroga pedida (usa el vivo, no el
+        // Sugerencia en vivo cuando hay prórroga pedida (usa el vivo final, no el
         // desfase del mes). Si no, usa el desfase del mes.
         try {
             if (prorrogaForzada) {
                 const planPS = planVivoParaProrroga();
-                const vivoPS = planPS ? saldoVivoDePlan(planPS, estado.mesSeleccionado) : deficit;
+                const vivoPS = planPS ? saldoVivoFinalDePlan(planPS, estado.mesSeleccionado) : deficit;
                 renderSugerenciaAhorro(vivoPS > 0.005 ? vivoPS : deficit);
             } else {
                 renderSugerenciaAhorro(deficit);
@@ -1553,14 +1582,15 @@ function actualizarCalculoProrrateo() {
     const lblDetalle = document.getElementById('lblProrrateoDetalle');
     if (!lblDetalle) return;
 
-    // Prórroga pedida al final: preview sobre el SALDO VIVO con el mismo formato
-    // que julio (vertical, en el bloque naranja). Genérico demo y real.
-    // Así el cuadro de abajo sí se actualiza en directo con cada ingreso/gasto.
+    // Prórroga pedida al final: preview sobre el SALDO VIVO FINAL con el mismo
+    // formato que julio (vertical, en el bloque naranja). Genérico demo y real.
+    // En vivo completo: el negativo de este mes sí suma (104.98 con -29.29
+    // => 134.27). Así el cuadro de abajo sí se actualiza con cada ingreso/gasto.
     try {
         if (esProrrogaSolicitada()) {
             const planP = planVivoParaProrroga();
             if (planP) {
-                const vivo = saldoVivoDePlan(planP, estado.mesSeleccionado);
+                const vivo = saldoVivoFinalDePlan(planP, estado.mesSeleccionado);
                 if (!(vivo > 0.005)) {
                     lblDetalle.innerHTML = '✅ Con lo de este mes ya está saldado: no hace falta prorrogar.';
                     return;

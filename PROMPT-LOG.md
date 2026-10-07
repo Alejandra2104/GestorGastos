@@ -6,7 +6,7 @@
 **Profesor:** José Antonio Delgado Alfonso
 **Repositorio:** https://github.com/Alejandra2104/GestorGastos (público, rama `main`)
 **MVP desplegado:** https://alejandra2104.github.io/GestorGastos/index.html?utm_source=pwa
-**Versión documentada:** v1.9.16
+**Versión documentada:** v1.9.17
 **Fecha límite entrega:** 09/10/2026 23:59 · **Presentación:** 13/10/2026 (5 min)
 
 > Este documento se reconstruye a partir del `git log` del repositorio (commits v1.4.0 → v1.9.0), del código en `public/` + `server.js` y de la memoria de la autora. No se conservaron los prompts literales, así que se describen por intención/resultado verificado en cada commit.
@@ -217,6 +217,11 @@ Sí, la app se centra solo en `public/`. El resto de carpetas son restos que se 
 * **Pedidos:** que 1 café suelto no cuente como hormiga (son hábitos); solo por semana de calendario lun–dom, con la semana contando en el mes donde cae el domingo; hábitos y goteo desplegables para ver de dónde vienen; demo lista para clase.
 * **Cambios (genéricos demo y real):** reescrita `detectarGastosHormiga(mesClave)` en `public/app.js`: agrupa micros ≤15 € sin fijos en propensas por semana lun–dom; `🔁 Hábito` = mismo concepto normalizado + categoría 3+ veces en la semana; `💧 Goteo` = resto de micros con 3+ movs y 10+ € en la semana; la semana filtra por mes del domingo y se ordena reciente primero; devuelve `{total, movs, porCategoria, semanas}` (compat con lo anterior); nuevo `hormigaHTML()` con una píldora por semana `🐜 Semana 7–13 sep: X € en N movs (Hábito X € + Goteo Y €)` + `<details>Ver detalle` con líneas de hábito (`concepto · Nx (días) = total`) y de goteo (cada micro con día) + estilos `.hormiga-semana/.hormiga-sub/.hormiga-hint` en `public/style.css`; demo ampliada en `public/app.js` + `server.js` (mismo contenido): septiembre mantiene 3x café 8/10/12 (hábito 10,50 € semana 8–14 sep) + snack suelto 15 sep que no sale; octubre trae semana a caballo 29 sep–4 oct con 3x café finde (9 €, cuenta en octubre) y semana 5–11 oct con 3x café oficina (9,60 €) + goteo bus/snack/revista/tiritas (14,50 €) = 24,10 € en 7 movs, más café puntual 14 oct que no sale.
 * **Versión:** app → v1.9.16, SW → v1.8.28. Verificado con `node --check` + prueba de lógica semanal y push a `main`.
+
+### S30 — Deuda final en vivo completo v1.9.17 (07/10/2026, pedido por Alejandra)
+* **Pedidos:** a mitad de plan que siga como ahora (el negativo no se exige ya, se acumula para el final); solo al final en `Plan terminado, quedan X €` que sume en vivo lo de este mes (ej: 50 con -20 => 70; 104.98 con -29.29 => 134.27) y que el bloque naranja al darle a `Prorrogar` también vaya en vivo completo.
+* **Cambios (genéricos demo y real):** nueva `saldoVivoFinalDePlan()` en `public/app.js` (`saldoPendiente - (balanceEsteMes - yaAplicado)`, sin capar el negativo, con tope 0); `saldoVivoDePlan()` se mantiene capado para mitad de plan; banner `lblAmortSaldoPendiente` usa final si `esFinDePlan || prorrogaActiva`, si no capado; `lblProrrogaDeuda` (ambas ramas final/más-allá), `saldoVivoFin`, `extenderPlanConSaldoVivo()`, `actualizarCalculoProrrateo()`, `actualizarPreviewProrroga()`, importe/desglose/sugerencia del naranja en `prorrogaForzada` y `vivoC` usan el final; el guardado sigue cuadrando al cerrar el mes en `conciliarPlanesAlCambiarMes` (sin duplicar). Aportado/retraso no cambian.
+* **Versión:** app → v1.9.17, SW → v1.8.29. Verificado con `node --check` + simulación (50/-20=>70 final y 50 mitad; 104.98/-29.29=>134.27; 85/80=>5 igual) y push a `main`.
 
 ## Qué hizo la IA vs qué hizo la humana (para el informe)
 
